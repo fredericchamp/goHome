@@ -3,13 +3,17 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
+	"math/rand" // TODO : remove (for testing purpose only)
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang/glog"
 )
 
+var sensorTickersLock sync.Mutex
 var sensorTickers = map[string]*time.Ticker{}
 
 func init() {
@@ -18,8 +22,10 @@ func init() {
 	RegisterInternalFunc("GPIO", GPIO)
 	RegisterInternalFunc("PoloTicker", PoloTicker)
 	RegisterInternalFunc("SerialATSMS", SerialATSMS)
+	rand.Seed(213248546) // TODO : remove (for testing purpose only)
 }
 
+// sensorSetup : read defined sensors from DB then create a ticker and start reading goroutine for each sensor
 func sensorSetup(db *sql.DB) (err error) {
 	sensorItems, err := getManageItems(db, -1, ItemSensor)
 	if err != nil {
@@ -42,6 +48,8 @@ func sensorSetup(db *sql.DB) (err error) {
 	if glog.V(2) {
 		glog.Info("\nSensor\n", sensorObjs)
 	}
+
+	sensorTickersLock.Lock()
 
 	for _, sensor := range sensorObjs {
 		var duration time.Duration
@@ -90,11 +98,14 @@ func sensorSetup(db *sql.DB) (err error) {
 		sensorTickers[sensorName] = time.NewTicker(duration)
 
 		go readSensor(sensor)
-
 	}
+
+	sensorTickersLock.Unlock()
+
 	return
 }
 
+// readSensor : perform sensor readings using ReadCmd according to initialised corresponding ticker
 func readSensor(sensor HomeObject) {
 	sensorName, err := sensor.getStrVal("Name")
 	if err != nil {
@@ -119,7 +130,11 @@ func readSensor(sensor HomeObject) {
 		return
 	}
 
-	for t := range sensorTickers[sensorName].C {
+	sensorTickersLock.Lock()
+	localTicker := sensorTickers[sensorName]
+	sensorTickersLock.Unlock()
+
+	for t := range localTicker.C {
 		var result string
 		var err error
 		if isInternal != 0 {
@@ -131,50 +146,94 @@ func readSensor(sensor HomeObject) {
 			continue
 		}
 		if record != 0 {
-			go RecordSensorValue(t, sensor, result)
+			go recordSensorValue(t, sensor, result)
 		}
 	}
 }
 
+// sensorCleanup : stop and remove all sensor ticker
 func sensorCleanup() {
-
+	sensorTickersLock.Lock()
+	for key, ticker := range sensorTickers {
+		ticker.Stop()
+		delete(sensorTickers, key)
+	}
+	sensorTickersLock.Unlock()
+	if glog.V(2) {
+		glog.Info("sensorCleanup Done")
+	}
 }
 
-func RecordSensorValue(t time.Time, sensor HomeObject, result string) {
-	// TODO
-	sensorName, err := sensor.getStrVal("Name")
+// recordSensorValue : store in DB a value for a given sensor reading
+// TODO : allow to store value outsite of main DB
+func recordSensorValue(t time.Time, sensor HomeObject, value string) {
+	db, err := openDB()
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	defer db.Close()
+
+	sensorId := sensor.getId()
+	dataType, err := sensor.getIntVal("IdDataType")
 	if err != nil {
 		return
 	}
-	glog.Infof("RecordSensorValue for %s at %s = %s ", sensorName, t, result)
+
+	switch dataType {
+	case DBTypeBool, DBTypeInt, DBTypeDateTime:
+		intVal, err := strconv.Atoi(value)
+		if err != nil {
+			glog.Errorf("Fail to get int(%s) for sensor %d from : %s", value, sensorId, err)
+			return
+		}
+		_, err = db.Exec("insert into HistoSensor values ( ?, ?, ?, ?, ?);", t.Second(), sensorId, intVal, 0, "")
+	case DBTypeText:
+		_, err = db.Exec("insert into HistoSensor values ( ?, ?, ?, ?, ?);", t.Second(), sensorId, 0, 0, value)
+	case DBTypeFloat:
+		floatVal, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			glog.Errorf("Fail to get float64(%s) for sensor %d from : %s", value, sensorId, err)
+			return
+		}
+		_, err = db.Exec("insert into HistoSensor values ( ?, ?, ?, ?, ?);", t.Second(), sensorId, 0, floatVal, "")
+	default:
+		glog.Errorf("Unknown data type %d for sensor %d", dataType, sensorId)
+	}
+	if err != nil {
+		glog.Errorf("Fail to store %d value (%s) for sensor %d from : %s ", dataType, value, sensorId, err)
+	}
 }
+
+// -----------------------------------------------
+// -----------------------------------------------
 
 func CpuUsage(param1 string, param2 string) (string, error) {
 	// TODO
-	glog.Info("CpuUsage Not Implemented ", param1, " + ", param2)
-	return time.Now().String(), nil
+	glog.Info("CpuUsage Not Implemented")
+	return fmt.Sprint(rand.Intn(100)), nil
 }
 
 func MemoryUsage(param1 string, param2 string) (string, error) {
 	// TODO
-	glog.Info("MemoryUsage Not Implemented ", param1, " + ", param2)
-	return time.Now().String(), nil
+	glog.Info("MemoryUsage Not Implemented")
+	return fmt.Sprint(rand.Intn(100)), nil
 }
 
 func GPIO(param1 string, param2 string) (string, error) {
 	// TODO
-	glog.Info("GPIO Not Implemented ", param1, " + ", param2)
+	glog.Info("GPIO Not Implemented")
 	return time.Now().String(), nil
 }
 
 func PoloTicker(param1 string, param2 string) (string, error) {
 	// TODO
-	glog.Info("PoloTicker Not Implemented ", param1, " + ", param2)
-	return time.Now().String(), nil
+	glog.Info("PoloTicker Not Implemented")
+	return fmt.Sprintf("%.8f", rand.Float64()), nil
 }
 
 func SerialATSMS(param1 string, param2 string) (string, error) {
 	// TODO
-	glog.Info("SerialATSMS Not Implemented ", param1, " + ", param2)
+	glog.Info("SerialATSMS Not Implemented")
 	return time.Now().String(), nil
 }

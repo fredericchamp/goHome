@@ -1,14 +1,95 @@
-// loadDB.go
+// database.go
 package main
 
 import (
+	"bufio"
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/golang/glog"
+	_ "github.com/mattn/go-sqlite3"
 )
+
+var dbFileName = ":memory:"
+
+// initDBFile : Check dbfile existance and acces right
+// Create and initialize and new file if needed
+func initDBFile(dbfile string) error {
+	createEmptyDB := false
+	dbFileName = dbfile
+
+	// Check DB file if not ":memory:"
+	if ":memory:" != dbFileName {
+		file, err := os.OpenFile(dbFileName, os.O_RDWR, 0666)
+		if err != nil {
+			switch {
+			case os.IsNotExist(err):
+				createEmptyDB = true
+				glog.Info("Creating new DB file")
+			case os.IsPermission(err):
+				glog.Errorf("Permission Error accessing '%s' : %s", dbFileName, err)
+				return err
+			default:
+				glog.Errorf("Unknow Error accessing '%s' : %s", dbFileName, err)
+				return err
+			}
+		}
+		file.Close()
+	}
+
+	// Init DB if new
+	if createEmptyDB {
+		// Open DB
+		db, err := openDB()
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+
+		// initDB sql stmt must be in initDB.sql in the same dir as dbFileName
+		initFileName := fmt.Sprintf("%s%c%s", filepath.Dir(dbFileName), filepath.Separator, "initDB.sql")
+		initFile, err := os.OpenFile(initFileName, os.O_RDONLY, 0444)
+		if err != nil {
+			glog.Errorf("Fail to open %s for reading : %s", initFileName, err)
+			return err
+		}
+		defer initFile.Close()
+
+		scanner := bufio.NewScanner(initFile)
+		for scanner.Scan() {
+			sqlStmt := strings.TrimSpace(scanner.Text())
+
+			if len(sqlStmt) == 0 || strings.HasPrefix(sqlStmt, "--") {
+				continue
+			}
+
+			_, err = db.Exec(sqlStmt)
+			if err != nil {
+				glog.Errorf("Error excuting sqlStmt (%s) : %s\n", sqlStmt, err)
+				return err
+			}
+		}
+		if err = scanner.Err(); err != nil {
+			glog.Errorf("Scanner error reading file '%s' : %s", initFileName, err)
+			return err
+		}
+	}
+	return nil
+}
+
+// openDB open a database connection and return it
+func openDB() (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", dbFileName)
+	if err != nil {
+		glog.Error(err)
+	}
+	return db, err
+}
 
 // getGlobalParam : fetch param value from db table goHome
 // if id >=0 query db using this id (ignoring scope and name parameter) else query using scope and name
@@ -179,6 +260,10 @@ type ItemFieldVal struct {
 type HomeObject struct {
 	Fields []ItemField
 	Values []ItemFieldVal
+}
+
+func (obj HomeObject) getId() (value int) {
+	return obj.Values[1].IdObject
 }
 
 func (obj HomeObject) getIntVal(fieldName string) (value int, err error) {

@@ -99,7 +99,7 @@ func handleSignal(done chan bool) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 	s := <-c
-	glog.Info("Got signal:", s, "... exiting")
+	glog.Infof("Got signal [%s] ... exiting", s)
 	signal.Reset()
 	done <- true
 }

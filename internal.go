@@ -4,18 +4,21 @@ package main
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/golang/glog"
 )
 
-// internalFuncs : Known function
+var internalFuncsLock sync.Mutex
 var internalFuncs = map[string]func(string, string) (string, error){
 	"DummyFunc": DummyFunc,
 }
 
 // RegisterInternalFunc : Add a fucntion so it can be call as a sensor or actor
 func RegisterInternalFunc(funcName string, function func(string, string) (string, error)) error {
+	internalFuncsLock.Lock()
+	defer internalFuncsLock.Unlock()
 	_, funcExist := internalFuncs[funcName]
 	if funcExist {
 		glog.Errorf("Can't register '%s' : Already have a function with this name", funcName)
@@ -27,7 +30,9 @@ func RegisterInternalFunc(funcName string, function func(string, string) (string
 
 // CallInternalFunc : Call an existing registered func
 func CallInternalFunc(funcName string, param1 string, param2 string) (string, error) {
+	internalFuncsLock.Lock()
 	function, funcExist := internalFuncs[funcName]
+	internalFuncsLock.Unlock()
 	if !funcExist {
 		err := errors.New(fmt.Sprintf("Function '%s' unknown", funcName))
 		glog.Error(err)
