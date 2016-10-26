@@ -17,6 +17,35 @@ import (
 
 var dbFileName = ":memory:"
 
+func execSqlStmtsFromFile(db *sql.DB, fileName string) (err error) {
+	initFile, err := os.OpenFile(fileName, os.O_RDONLY, 0444)
+	if err != nil {
+		glog.Errorf("Fail to open %s for reading : %s", fileName, err)
+		return
+	}
+	defer initFile.Close()
+
+	scanner := bufio.NewScanner(initFile)
+	for scanner.Scan() {
+		sqlStmt := strings.TrimSpace(scanner.Text())
+
+		if len(sqlStmt) == 0 || strings.HasPrefix(sqlStmt, "--") {
+			continue
+		}
+
+		_, err = db.Exec(sqlStmt)
+		if err != nil {
+			glog.Errorf("Error excuting sqlStmt (%s) : %s\n", sqlStmt, err)
+			return
+		}
+	}
+	if err = scanner.Err(); err != nil {
+		glog.Errorf("Scanner error reading file '%s' : %s", fileName, err)
+		return
+	}
+	return
+}
+
 // initDBFile : Check dbfile existance and acces right
 // Create and initialize and new file if needed
 func initDBFile(dbfile string) error {
@@ -51,33 +80,13 @@ func initDBFile(dbfile string) error {
 		}
 		defer db.Close()
 
-		// initDB sql stmt must be in initDB.sql in the same dir as dbFileName
-		initFileName := fmt.Sprintf("%s%c%s", filepath.Dir(dbFileName), filepath.Separator, "initDB.sql")
-		initFile, err := os.OpenFile(initFileName, os.O_RDONLY, 0444)
+		// initDB sql stmt must be in init.sql file in the same dir as dbFileName
+		err = execSqlStmtsFromFile(db, fmt.Sprintf("%s%c%s", filepath.Dir(dbFileName), filepath.Separator, "init.sql"))
 		if err != nil {
-			glog.Errorf("Fail to open %s for reading : %s", initFileName, err)
 			return err
 		}
-		defer initFile.Close()
-
-		scanner := bufio.NewScanner(initFile)
-		for scanner.Scan() {
-			sqlStmt := strings.TrimSpace(scanner.Text())
-
-			if len(sqlStmt) == 0 || strings.HasPrefix(sqlStmt, "--") {
-				continue
-			}
-
-			_, err = db.Exec(sqlStmt)
-			if err != nil {
-				glog.Errorf("Error excuting sqlStmt (%s) : %s\n", sqlStmt, err)
-				return err
-			}
-		}
-		if err = scanner.Err(); err != nil {
-			glog.Errorf("Scanner error reading file '%s' : %s", initFileName, err)
-			return err
-		}
+		// perso.sql may not be present => ignore error
+		execSqlStmtsFromFile(db, fmt.Sprintf("%s%c%s", filepath.Dir(dbFileName), filepath.Separator, "perso.sql"))
 	}
 	return nil
 }
@@ -193,7 +202,7 @@ func getManageItems(db *sql.DB, idItem int, idItemType int) (items []Item, err e
 // -----------------------------------------------
 
 type ItemField struct {
-	IdField    int
+	Id         int
 	IdItem     int
 	NOrder     int
 	Name       string
@@ -221,11 +230,11 @@ func getItemFields(db *sql.DB, idItem int, idObject int) (fields []ItemField, er
 
 	switch {
 	case idItem >= 0:
-		rows, err = db.Query("select idField, idItem, nOrder, Name, idDataType, Helper, Regexp from ItemField where idItem = ? order by nOrder", idItem)
+		rows, err = db.Query("select id, idItem, nOrder, Name, idDataType, Helper, Regexp from ItemField where idItem = ? order by nOrder", idItem)
 	case idObject >= 0:
-		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Helper, f.Regexp from ItemField f, ItemFieldVal v where f.idField = v.idField and v.idObject = ? order by nOrder", idObject)
+		rows, err = db.Query("select f.id, f.idItem, f.nOrder, f.Name, f.idDataType, f.Helper, f.Regexp from ItemField f, ItemFieldVal v where f.idField = v.idField and v.idObject = ? order by nOrder", idObject)
 	default:
-		rows, err = db.Query("select idField, idItem, nOrder, Name, idDataType, Helper, Regexp from ItemField order by idItem, nOrder")
+		rows, err = db.Query("select id, idItem, nOrder, Name, idDataType, Helper, Regexp from ItemField order by idItem, nOrder")
 	}
 	if err != nil {
 		glog.Error(err)
@@ -234,7 +243,7 @@ func getItemFields(db *sql.DB, idItem int, idObject int) (fields []ItemField, er
 	defer rows.Close()
 
 	for rows.Next() {
-		err = rows.Scan(&curField.IdField, &curField.IdItem, &curField.NOrder, &curField.Name, &curField.IdDataType, &curField.Helper, &curField.Regexp)
+		err = rows.Scan(&curField.Id, &curField.IdItem, &curField.NOrder, &curField.Name, &curField.IdDataType, &curField.Helper, &curField.Regexp)
 		if err != nil {
 			glog.Error(err)
 			return
@@ -249,7 +258,7 @@ func getItemFields(db *sql.DB, idItem int, idObject int) (fields []ItemField, er
 }
 
 type ItemFieldVal struct {
-	IdObject int
+	Id       int
 	IdField  int
 	IntVal   int
 	FloatVal float32
@@ -263,7 +272,7 @@ type HomeObject struct {
 }
 
 func (obj HomeObject) getId() (value int) {
-	return obj.Values[1].IdObject
+	return obj.Values[1].Id
 }
 
 func (obj HomeObject) getIntVal(fieldName string) (value int, err error) {
@@ -410,9 +419,9 @@ func getDBObjects(db *sql.DB, idObject int, idItem int) (objs []HomeObject, err 
 	}
 
 	if idObject >= 0 {
-		rows, err = db.Query("select v.idObject, v.idField, v.intVal, v.floatVal, v.textVal, v.byteVal from ItemFieldVal v, ItemField f where v.idField = f.idField and v.idObject = ? order by v.idObject, f.NOrder", idObject)
+		rows, err = db.Query("select v.id, v.idField, v.intVal, v.floatVal, v.textVal, v.byteVal from ItemFieldVal v, ItemField f where v.idField = f.id and v.idObject = ? order by v.id, f.NOrder", idObject)
 	} else {
-		rows, err = db.Query("select v.idObject, v.idField, v.intVal, v.floatVal, v.textVal, v.byteVal from ItemFieldVal v, ItemField f where v.idField = f.idField and f.idItem = ? order by v.idObject, f.NOrder", idItem)
+		rows, err = db.Query("select v.id, v.idField, v.intVal, v.floatVal, v.textVal, v.byteVal from ItemFieldVal v, ItemField f where v.idField = f.id and f.idItem = ? order by v.id, f.NOrder", idItem)
 	}
 	if err != nil {
 		glog.Error(err)
@@ -421,18 +430,18 @@ func getDBObjects(db *sql.DB, idObject int, idItem int) (objs []HomeObject, err 
 	defer rows.Close()
 
 	for rows.Next() {
-		err = rows.Scan(&curVal.IdObject, &curVal.IdField, &curVal.IntVal, &curVal.FloatVal, &curVal.TextVal, &curVal.ByteVal)
+		err = rows.Scan(&curVal.Id, &curVal.IdField, &curVal.IntVal, &curVal.FloatVal, &curVal.TextVal, &curVal.ByteVal)
 		if curIdObject == 0 {
-			curIdObject = curVal.IdObject
+			curIdObject = curVal.Id
 		}
 		if err != nil {
 			glog.Error(err)
 			return
 		}
-		if curIdObject != curVal.IdObject {
+		if curIdObject != curVal.Id {
 			objs = append(objs, curObj)
 			curObj.Values = make([]ItemFieldVal, 0, len(curObj.Fields))
-			curIdObject = curVal.IdObject
+			curIdObject = curVal.Id
 		}
 		curObj.Values = append(curObj.Values, curVal)
 	}

@@ -7,8 +7,8 @@ import (
 	"github.com/golang/glog"
 )
 
-func LaunchExternalCmd(cmd string, param1 string, param2 string) (string, error) {
+func LaunchExternalCmd(funcType internalFunctType, cmd string, param1 string, param2 string) (string, error) {
 	// TODO
-	glog.Info("LaunchExternalCmd Not Implemented ", param1, " + ", param2)
+	glog.Infof("LaunchExternalCmd Not Implemented %s(%s,%s)", cmd, param1, param2)
 	return time.Now().String(), nil
 }

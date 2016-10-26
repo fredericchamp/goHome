@@ -203,6 +203,17 @@ func main() {
 	}
 	defer sensorCleanup()
 
+	err = actorSetup(db)
+	if err != nil {
+		glog.Errorf("ActorSetup failed : %s ... exiting", err)
+		return
+	}
+	defer actorCleanup()
+
+	triggerActor("Portal", "test 1")
+	triggerActor("SendSMS", "test 2")
+	triggerActor("Garage", "test 3")
+
 	<-done
 	glog.Info("Bye !")
 }
