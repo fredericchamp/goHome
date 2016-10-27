@@ -18,8 +18,10 @@ const (
 	ProfilUser
 )
 
+type itemType int
+
 const (
-	ItemEntity = 1 + iota
+	ItemEntity itemType = 1 + iota
 	ItemSensor
 	ItemActor
 	ItemSensorAct
@@ -93,11 +95,14 @@ func init() {
 // -----------------------------------------------
 // -----------------------------------------------
 
-// handleSignal Handle OS signals.
+// signalSetup Handle OS signals.
 // send true to the done chanel when server should end
-func handleSignal(done chan bool) {
+func signalSetup(done chan bool) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+	if glog.V(2) {
+		glog.Info("signalSetup done")
+	}
 	s := <-c
 	glog.Infof("Got signal [%s] ... exiting", s)
 	signal.Reset()
@@ -118,6 +123,9 @@ func rootHTTPHandler(w http.ResponseWriter, r *http.Request) {
 func startHTTP(port int) {
 	http.HandleFunc("/", rootHTTPHandler)
 	http.ListenAndServe(fmt.Sprintf("localhost:%d", port), nil) // TODO error handling
+	if glog.V(2) {
+		glog.Infof("startHTTP(%d) done", port)
+	}
 }
 
 // -----------------------------------------------
@@ -125,16 +133,18 @@ func startHTTP(port int) {
 
 func main() {
 	defer glog.Flush()
-	fmt.Printf("pid=%d\n", os.Getpid())
+	defer glog.Info("Bye !")
 
 	done := make(chan bool)
 
 	if glog.V(2) {
 		glog.Info("sqlite3 file = ", *dbfile)
-		glog.Info("debug = ", *debug)
+		if *debug {
+			glog.Info("debug mode ON ")
+		}
 	}
 
-	go handleSignal(done)
+	go signalSetup(done)
 
 	err := initDBFile(*dbfile)
 	if err != nil {
@@ -158,62 +168,23 @@ func main() {
 		glog.Errorf("Error converting port# (%s) : %s ... exiting", value, err)
 		return
 	}
-	if glog.V(2) {
-		glog.Info("Port# = ", port)
-	}
-	//go startHTTP(port)
 
-	/*
-		items, err := getManageItems(db, -1, -1)
-		if err != nil {
-			glog.Errorf("Error getting manage items : %s ... exiting", err)
-			return
-		}
-		glog.Info("items = ", items)
-
-		fields, err := getItemFields(db, -1, -1)
-		if err != nil {
-			glog.Errorf("Error getting item fields : %s ... exiting", err)
-			return
-		}
-		glog.Info("fields = ", fields)
-
-			obj1, err := getDBObjects(db, 9, -1)
-			if err != nil {
-				glog.Errorf("Error getting obj 9 : %s ... exiting", err)
-				return
-			}
-			glog.Info("obj 9 = ", obj1)
-
-			objs, err := getDBObjects(db, -1, 2)
-			if err != nil {
-				glog.Errorf("Error getting objs for item 2 : %s ... exiting", err)
-				return
-			}
-			glog.Info("--------------------------------\nfields = ", objs[1].Fields)
-			for _, v := range objs {
-				glog.Info("--------------------------------\nvalues = ", v.Values)
-			}
-	*/
+	go startHTTP(port)
 
 	err = sensorSetup(db)
 	if err != nil {
-		glog.Errorf("SensorSetup failed : %s ... exiting", err)
+		glog.Errorf("sensorSetup failed : %s ... exiting", err)
 		return
 	}
 	defer sensorCleanup()
 
 	err = actorSetup(db)
 	if err != nil {
-		glog.Errorf("ActorSetup failed : %s ... exiting", err)
+		glog.Errorf("actorSetup failed : %s ... exiting", err)
 		return
 	}
 	defer actorCleanup()
 
-	triggerActor("Portal", "test 1")
-	triggerActor("SendSMS", "test 2")
-	triggerActor("Garage", "test 3")
-
 	<-done
-	glog.Info("Bye !")
+	defer glog.Info("Main done")
 }

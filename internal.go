@@ -5,72 +5,53 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/golang/glog"
 )
 
-type internalFunctType int
+type internalFuncType int
 
 const (
-	SensorFunc internalFunctType = 1 + iota
+	SensorFunc internalFuncType = 1 + iota
 	ActorFunc
 )
 
-var internalSensorFuncsLock sync.Mutex
-var internalSensorFuncs = map[string]func(string, string) (string, error){
-	"DummyFunc": DummyFunc,
-}
+var internalFuncsLock sync.Mutex
+var internalFuncs = map[string]func(string, string) (string, error){}
 
-var internalActorFuncsLock sync.Mutex
-var internalActorFuncs = map[string]func(string, string) (string, error){
-	"DummyFunc": DummyFunc,
+func getFuncKey(funcType internalFuncType, funcName string) string {
+	return fmt.Sprintf("%d %s", funcType, funcName)
 }
 
 // RegisterInternalFunc : Add a fucntion so it can be call as a sensor or actor
-func RegisterInternalFunc(funcType internalFunctType, funcName string, function func(string, string) (string, error)) (err error) {
-	switch funcType {
-	case SensorFunc:
-		err = regIntFunc(internalSensorFuncsLock, internalSensorFuncs, funcName, function)
-	case ActorFunc:
-		err = regIntFunc(internalActorFuncsLock, internalActorFuncs, funcName, function)
-	default:
-		err = errors.New("Unknown internalFunctType")
-	}
-	return
-}
+func RegisterInternalFunc(funcType internalFuncType, funcName string, function func(string, string) (string, error)) error {
+	fctKey := getFuncKey(funcType, funcName)
 
-func regIntFunc(lock sync.Mutex, fctmap map[string]func(string, string) (string, error), funcName string, function func(string, string) (string, error)) error {
-	lock.Lock()
-	defer lock.Unlock()
-	_, funcExist := fctmap[funcName]
+	internalFuncsLock.Lock()
+	defer internalFuncsLock.Unlock()
+
+	_, funcExist := internalFuncs[fctKey]
 	if funcExist {
-		glog.Errorf("Can't register '%s' : Already have a function with this name", funcName)
-		return errors.New("Already have a function with this name")
+		err := errors.New(fmt.Sprintf("Can't register '%s' : Already have a function with this name", fctKey))
+		glog.Error(err)
+		return err
 	}
-	fctmap[funcName] = function
+
+	internalFuncs[fctKey] = function
+
 	return nil
 }
 
 // CallInternalFunc : Call an existing registered func
-func CallInternalFunc(funcType internalFunctType, funcName string, param1 string, param2 string) (string, error) {
-	var function func(string, string) (string, error)
-	var funcExist bool
-	switch funcType {
-	case SensorFunc:
-		internalSensorFuncsLock.Lock()
-		function, funcExist = internalSensorFuncs[funcName]
-		internalSensorFuncsLock.Unlock()
-	case ActorFunc:
-		internalActorFuncsLock.Lock()
-		function, funcExist = internalActorFuncs[funcName]
-		internalActorFuncsLock.Unlock()
-	default:
-		err := errors.New("Unknown internalFunctType")
-		return "", err
-	}
+func CallInternalFunc(funcType internalFuncType, funcName string, param1 string, param2 string) (string, error) {
+	fctKey := getFuncKey(funcType, funcName)
+
+	internalFuncsLock.Lock()
+	function, funcExist := internalFuncs[fctKey]
+	internalFuncsLock.Unlock()
+
 	if !funcExist {
-		err := errors.New(fmt.Sprintf("Function '%s' unknown", funcName))
+		err := errors.New(fmt.Sprintf("Function '%s' unknown", fctKey))
 		glog.Error(err)
 		return "", err
 	}
@@ -79,8 +60,3 @@ func CallInternalFunc(funcType internalFunctType, funcName string, param1 string
 
 // -----------------------------------------------
 // -----------------------------------------------
-
-func DummyFunc(param1 string, param2 string) (string, error) {
-	glog.Info("DummyFunc : does nothing ", param1, " + ", param2)
-	return time.Now().String(), nil
-}

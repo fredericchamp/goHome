@@ -155,7 +155,7 @@ type Item struct {
 
 // getManageItems select manage Items from DB
 // If idItem >=0 return Item with given Id else return all Items
-func getManageItems(db *sql.DB, idItem int, idItemType int) (items []Item, err error) {
+func getManageItems(db *sql.DB, idItem int, idItemType itemType) (items []Item, err error) {
 	if db == nil {
 		db, err = openDB()
 		if err != nil {
@@ -267,11 +267,12 @@ type ItemFieldVal struct {
 }
 
 type HomeObject struct {
-	Fields []ItemField
-	Values []ItemFieldVal
+	Fields     []ItemField
+	Values     []ItemFieldVal
+	linkedObjs []HomeObject
 }
 
-func (obj HomeObject) getId() (value int) {
+func (obj HomeObject) getId() int {
 	return obj.Values[1].Id
 }
 
@@ -452,5 +453,35 @@ func getDBObjects(db *sql.DB, idObject int, idItem int) (objs []HomeObject, err 
 		return
 	}
 
+	return
+}
+
+// getDBObject select object from db
+// If idObject >=0 return Object with Id = idObject else return all object for Item definition idItem
+func getDBObjectsForType(db *sql.DB, idItemType itemType) (objs []HomeObject, err error) {
+	if db == nil {
+		db, err = openDB()
+		if err != nil {
+			glog.Error(err)
+			return
+		}
+		defer db.Close()
+	}
+
+	items, err := getManageItems(db, -1, idItemType)
+	if err != nil {
+		return
+	}
+
+	var lst []HomeObject
+	for _, item := range items {
+		lst, err = getDBObjects(db, -1, item.Id)
+		if err != nil {
+			return
+		}
+		for _, obj := range lst {
+			objs = append(objs, obj)
+		}
+	}
 	return
 }

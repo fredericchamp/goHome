@@ -115,12 +115,12 @@ insert into ItemFieldVal values ( 23, 22, 1, 0, '', null );
 insert into Item values      ( 4, 'SensorAct', 1, 4, 2, null);
 insert into ItemField values (23, 4, 1, 'idSensor', 2, 'sensor list', '');
 insert into ItemField values (24, 4, 2, 'idActor', 2, 'actor list', '');
-insert into ItemField values (25, 4, 3, 'Condition', 5, '', '');
+insert into ItemField values (25, 4, 3, 'Condition', 4, '', '');
 insert into ItemField values (26, 4, 4, 'ActorParam', 4, '', '');
 insert into ItemField values (27, 4, 5, 'IsActive', 1, '{"Yes":1,"No":0}', '');
 
-insert into ItemFieldVal values ( 30, 23, 4, 0, '', null );
-insert into ItemFieldVal values ( 30, 24, 9, 0, '', null );
+insert into ItemFieldVal values ( 30, 23, 12, 0, '', null );
+insert into ItemFieldVal values ( 30, 24, 23, 0, '', null );
 insert into ItemFieldVal values ( 30, 25, 0, 0, '@value@ != @PrevValue@', null );
 insert into ItemFieldVal values ( 30, 26, 0, 0, '{"phone":"+123123456789","message":"Alarm @value@"}', null );
 insert into ItemFieldVal values ( 30, 27, 1, 0, '', null );
