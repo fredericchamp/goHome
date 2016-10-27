@@ -4,8 +4,8 @@ Generic server for domotic operation
 
 I plan to setup this on my raspberrypi
 
+Currently my first goal is to learn Go Lang with a 'real' projet
 
-Currently my first goal is to build a projet for Go Lang learning
 
+* Under development
 
-* Under development *

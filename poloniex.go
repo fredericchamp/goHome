@@ -27,11 +27,8 @@ type StructTicker struct {
 	Low24h        string
 }
 
-var prevValues map[string]StructTicker
-
 func init() {
 	RegisterInternalFunc(SensorFunc, "GetPoloTicker", GetPoloTicker)
-	prevValues = make(map[string]StructTicker)
 }
 
 // TODO use WAMP pub api : wss://api.poloniex.com and (https://github.com/llchan/go-wamp)
@@ -72,9 +69,6 @@ func GetPoloTicker(param1 string, param2 string) (result string, err error) {
 		glog.Errorf("Fail to unmarshal value for map[%s] : %s", param1, err)
 		return
 	}
-
-	// keep last value
-	prevValues[param1] = oneTicker
 
 	if glog.V(2) {
 		glog.Infof("GetPoloTicker (%s) (%s) = %s", param1, param2, oneTicker.Last)
