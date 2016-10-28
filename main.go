@@ -7,8 +7,8 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/golang/glog"
 )
@@ -123,8 +123,6 @@ func main() {
 	defer glog.Flush()
 	defer glog.Info("Bye !")
 
-	done := make(chan bool)
-
 	if glog.V(1) {
 		glog.Info("sqlite3 file = ", *dbfile)
 		if *debugFlag {
@@ -132,7 +130,11 @@ func main() {
 		}
 	}
 
-	go signalSetup(done)
+	// -----------------------------------------------
+	// Setup server
+
+	chanExit := make(chan bool)
+	go signalSetup(chanExit)
 
 	err := initDBFile(*dbfile)
 	if err != nil {
@@ -146,18 +148,7 @@ func main() {
 	}
 	defer db.Close()
 
-	value, err := getGlobalParam(db, -1, "goHome", "port")
-	if err != nil {
-		glog.Errorf("Error getting port# : %s ... exiting", err)
-		return
-	}
-	port, err := strconv.Atoi(value)
-	if err != nil {
-		glog.Errorf("Error converting port# (%s) : %s ... exiting", value, err)
-		return
-	}
-
-	go startHTTP(port)
+	go startHTTPS(chanExit)
 
 	err = sensorSetup(db)
 	if err != nil {
@@ -173,8 +164,13 @@ func main() {
 	}
 	defer actorCleanup()
 
-	glog.Infof("---*--- %s up and running ---*---", filepath.Base(os.Args[0]))
+	// Setup finish
+	// -----------------------------------------------
 
-	<-done
+	time.Sleep(3)
+
+	glog.Infof("---*--- %s setup done ---*---", filepath.Base(os.Args[0]))
+
+	<-chanExit
 	defer glog.Info("Main done")
 }
