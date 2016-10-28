@@ -3,6 +3,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"go/constant"
 	"go/token"
@@ -40,7 +41,7 @@ func sensorSetup(db *sql.DB) (err error) {
 	if err != nil {
 		return
 	}
-	if glog.V(3) {
+	if glog.V(2) {
 		glog.Info("\nSensor Objs\n", sensorObjs)
 	}
 
@@ -48,7 +49,7 @@ func sensorSetup(db *sql.DB) (err error) {
 	if err != nil {
 		return
 	}
-	if glog.V(3) {
+	if glog.V(2) {
 		glog.Info("\nSensorAct Objs\n", sensorActObjs)
 	}
 
@@ -61,7 +62,7 @@ func sensorSetup(db *sql.DB) (err error) {
 		for i, _ := range sensorObjs {
 			if sensorObjs[i].getId() == linkSensorId {
 				sensorObjs[i].linkedObjs = append(sensorObjs[i].linkedObjs, sensorAct)
-				if glog.V(3) {
+				if glog.V(2) {
 					glog.Infof("Add sensorAct %d to sensor %d", sensorAct.getId(), sensorObjs[i].getId())
 				}
 				break
@@ -107,13 +108,18 @@ func sensorSetup(db *sql.DB) (err error) {
 		case strings.HasSuffix(durationStr, DurationH):
 			i, err = strconv.Atoi(strings.TrimSuffix(durationStr, DurationH))
 			duration = time.Hour * time.Duration(i)
+		case strings.HasSuffix(durationStr, DurationD):
+			i, err = strconv.Atoi(strings.TrimSuffix(durationStr, DurationD))
+			duration = time.Hour * 24 * time.Duration(i)
+		default:
+			err = errors.New("Unknown duration format")
 		}
 		if err != nil {
 			glog.Error("Falied to read duration (", durationStr, ") :", err)
 			return err
 		}
 
-		if glog.V(3) {
+		if glog.V(2) {
 			glog.Infof("Sensor %s / %s => New Ticker (%d)", sensorName, durationStr, duration)
 		}
 		sensorTickers[sensorName] = time.NewTicker(duration)
@@ -121,7 +127,7 @@ func sensorSetup(db *sql.DB) (err error) {
 		go readSensor(sensor)
 	}
 
-	if glog.V(2) {
+	if glog.V(1) {
 		glog.Infof("sensorSetup Done (%d)", len(sensorTickers))
 	}
 
@@ -175,7 +181,7 @@ func readSensor(sensor HomeObject) {
 			prevVal = result
 		}
 
-		if glog.V(3) {
+		if glog.V(2) {
 			glog.Infof("Sensor %s / Nb sensorAct = %d", sensorName, len(sensor.linkedObjs))
 		}
 		// Trigger linked sensorAct if any
@@ -198,7 +204,7 @@ func sensorCleanup() {
 		delete(sensorTickers, key)
 	}
 	sensorTickersLock.Unlock()
-	if glog.V(2) {
+	if glog.V(1) {
 		glog.Info("sensorCleanup Done")
 	}
 }
@@ -242,8 +248,9 @@ func recordSensorValue(t time.Time, sensor HomeObject, value string) {
 	if err != nil {
 		glog.Errorf("Fail to store %d value (%s) for sensor %d from : %s ", dataType, value, sensorId, err)
 	}
-	if glog.V(2) {
-		glog.Infof("recordSensorValue at %d (%s)", t.Unix(), value)
+	if glog.V(1) {
+		sensorName, _ := sensor.getStrVal("Name")
+		glog.Infof("recordSensorValue for %s at %d (%s)", sensorName, t.Unix(), value)
 	}
 }
 
@@ -260,7 +267,7 @@ func triggerSensorAct(sensorAct HomeObject, sensorName string, prevVal string, l
 	condition = strings.Replace(condition, TagSensorName, sensorName, -1)
 	condition = strings.Replace(condition, TagPrevVal, prevVal, -1)
 	condition = strings.Replace(condition, TagLastVal, lastVal, -1)
-	if glog.V(3) {
+	if glog.V(2) {
 		glog.Infof("Condition for sensorAct #%d (%s) = '%s'", sensorActId, sensorName, condition)
 	}
 

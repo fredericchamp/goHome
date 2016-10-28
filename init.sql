@@ -15,7 +15,7 @@ create table HistoSensor (ts datetime, idObject integer, intVal integer, floatVa
 create table HistoActor (ts datetime, idObject integer, Param text, Result text);
 
 insert into goHome values    ( 0, 'goHome', 'InterfaceVersion', '1');
-insert into goHome values    ( 1, 'goHome', 'port', '6000');
+insert into goHome values    ( 1, 'goHome', 'port', '5100');
 insert into goHome values    ( 2, 'goHome', 'email', 'admin@goHomeDomain.net');
 
 insert into Item values      ( 1, 'User', 1, 1, 0, null);

@@ -287,7 +287,7 @@ func (obj HomeObject) getIntVal(fieldName string) (value int, err error) {
 	if idx < 0 {
 		err = errors.New(fmt.Sprintf("Field '%s' not found", fieldName))
 		glog.Error(err)
-		if glog.V(2) {
+		if glog.V(1) {
 			glog.Info(obj)
 		}
 		return
@@ -306,7 +306,7 @@ func (obj HomeObject) getIntVal(fieldName string) (value int, err error) {
 	}
 	if err != nil {
 		glog.Error(err)
-		if glog.V(2) {
+		if glog.V(1) {
 			glog.Info(obj)
 		}
 	}
@@ -324,7 +324,7 @@ func (obj HomeObject) getStrVal(fieldName string) (value string, err error) {
 	if idx < 0 {
 		err = errors.New(fmt.Sprintf("Field '%s' not found", fieldName))
 		glog.Error(err)
-		if glog.V(2) {
+		if glog.V(1) {
 			glog.Info(obj)
 		}
 		return
@@ -349,7 +349,7 @@ func (obj HomeObject) getStrVal(fieldName string) (value string, err error) {
 	}
 	if err != nil {
 		glog.Error(err)
-		if glog.V(2) {
+		if glog.V(1) {
 			glog.Info(obj)
 		}
 	}
@@ -367,7 +367,7 @@ func (obj HomeObject) getByteVal(fieldName string) (value []byte, err error) {
 	if idx < 0 {
 		err = errors.New(fmt.Sprintf("Field '%s' not found", fieldName))
 		glog.Error(err)
-		if glog.V(2) {
+		if glog.V(1) {
 			glog.Info(obj)
 		}
 		return
@@ -390,7 +390,7 @@ func (obj HomeObject) getByteVal(fieldName string) (value []byte, err error) {
 	}
 	if err != nil {
 		glog.Error(err)
-		if glog.V(2) {
+		if glog.V(1) {
 			glog.Info(obj)
 		}
 	}

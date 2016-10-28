@@ -1,11 +1,12 @@
+// main.go
 package main
 
 import (
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"syscall"
 
@@ -25,6 +26,8 @@ const (
 	ItemSensor
 	ItemActor
 	ItemSensorAct
+
+// TODO	ItemStreamSensor
 )
 
 const (
@@ -64,6 +67,10 @@ const defaultSqlite3File = "/var/goHome/goHome.sqlite3"
 var dbfile = flag.String("sqlite3", defaultSqlite3File, "full path to sqlite3 database file")
 var debug = flag.Bool("debug", false, "run in debug mode")
 
+// Reminder : v flags for glog
+// -v=2
+// -vmodule=actor=2,sens*=1
+
 func usage() {
 	//	fmt.Fprintf(os.Stderr, "usage: %s -stderrthreshold=[INFO|WARN|FATAL] -log_dir=[string]\n", os.Args[0])
 	//	flag.PrintDefaults()
@@ -100,7 +107,7 @@ func init() {
 func signalSetup(done chan bool) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
-	if glog.V(2) {
+	if glog.V(1) {
 		glog.Info("signalSetup done")
 	}
 	s := <-c
@@ -112,32 +119,13 @@ func signalSetup(done chan bool) {
 // -----------------------------------------------
 // -----------------------------------------------
 
-// rootHTTPHandler : Handle HTTP request to '/'
-func rootHTTPHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "<p>goHome version %s</p>", goHomeVersion)
-	fmt.Fprintf(w, "<p>URL requested : %s</p>", r.URL.Path)
-}
-
-// startHTTP is used to start the HTTP server part.
-// It takes an int as parameter that define the port number to listen
-func startHTTP(port int) {
-	http.HandleFunc("/", rootHTTPHandler)
-	http.ListenAndServe(fmt.Sprintf("localhost:%d", port), nil) // TODO error handling
-	if glog.V(2) {
-		glog.Infof("startHTTP(%d) done", port)
-	}
-}
-
-// -----------------------------------------------
-// -----------------------------------------------
-
 func main() {
 	defer glog.Flush()
 	defer glog.Info("Bye !")
 
 	done := make(chan bool)
 
-	if glog.V(2) {
+	if glog.V(1) {
 		glog.Info("sqlite3 file = ", *dbfile)
 		if *debug {
 			glog.Info("debug mode ON ")
@@ -184,6 +172,8 @@ func main() {
 		return
 	}
 	defer actorCleanup()
+
+	glog.Infof("---*--- %s up and running ---*---", filepath.Base(os.Args[0]))
 
 	<-done
 	defer glog.Info("Main done")

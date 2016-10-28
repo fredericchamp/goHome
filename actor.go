@@ -26,7 +26,7 @@ func actorSetup(db *sql.DB) (err error) {
 	if err != nil {
 		return
 	}
-	if glog.V(3) {
+	if glog.V(2) {
 		glog.Info("\nActor\n", actorObjs)
 	}
 
@@ -51,7 +51,7 @@ func actorSetup(db *sql.DB) (err error) {
 		actorsMap[actorName] = actor
 	}
 
-	if glog.V(2) {
+	if glog.V(1) {
 		glog.Infof("actorSetup Done (%d)", len(actorsMap))
 	}
 
@@ -120,7 +120,7 @@ func actorCleanup() {
 	actorsMapLock.Lock()
 	actorsMap = make(map[string]HomeObject)
 	actorsMapLock.Unlock()
-	if glog.V(2) {
+	if glog.V(1) {
 		glog.Info("actorCleanup Done")
 	}
 }
@@ -141,7 +141,7 @@ func recordActorResult(actor HomeObject, param string, result string) {
 	if err != nil {
 		glog.Errorf("Fail to store result (%s) for actor %d from : %s ", result, actorId, err)
 	}
-	if glog.V(2) {
+	if glog.V(1) {
 		glog.Infof("recordActorResult : %d - %s - %s", time.Now().Unix(), param, result)
 	}
 }
