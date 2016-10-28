@@ -65,7 +65,7 @@ const defaultSqlite3File = "/var/goHome/goHome.sqlite3"
 // -----------------------------------------------
 
 var dbfile = flag.String("sqlite3", defaultSqlite3File, "full path to sqlite3 database file")
-var debug = flag.Bool("debug", false, "run in debug mode")
+var debugFlag = flag.Bool("debug", false, "run in debug mode")
 
 // Reminder : v flags for glog
 // -v=2
@@ -127,7 +127,7 @@ func main() {
 
 	if glog.V(1) {
 		glog.Info("sqlite3 file = ", *dbfile)
-		if *debug {
+		if *debugFlag {
 			glog.Info("debug mode ON ")
 		}
 	}

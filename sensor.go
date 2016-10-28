@@ -311,18 +311,18 @@ func triggerSensorAct(sensorAct HomeObject, sensorName string, prevVal string, l
 
 func CpuUsage(param1 string, param2 string) (string, error) {
 	// TODO
-	glog.Info("CpuUsage Not Implemented")
+	glog.V(2).Info("CpuUsage Not Implemented")
 	return fmt.Sprint(rand.Intn(100)), nil
 }
 
 func MemoryUsage(param1 string, param2 string) (string, error) {
 	// TODO
-	glog.Info("MemoryUsage Not Implemented")
+	glog.V(2).Info("MemoryUsage Not Implemented")
 	return fmt.Sprint(rand.Intn(100)), nil
 }
 
 func SensorGPIO(param1 string, param2 string) (string, error) {
 	// TODO
-	glog.Info("GPIO Not Implemented")
+	glog.V(2).Info("GPIO Not Implemented")
 	return time.Now().String(), nil
 }
