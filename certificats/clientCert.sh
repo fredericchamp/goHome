@@ -1,15 +1,9 @@
 #!/bin/bash
 #
-set -x
+#set -x
 
 # ####################################################
 # IMPORTANT First create a self signed CA
-#
-# mkdir certs crl newcerts private
-# touch index.txt
-# openssl req -new -newkey rsa:4096 -keyout private/goHomeCAkey.pem -out goHomeCAreq.pem -config ./goHome.cnf
-# openssl ca -create_serial -out goHomeCAcert.pem -days 3650 -keyfile private/goHomeCAkey.pem -selfsign -extensions v3_ca -config ./goHome.cnf -infiles goHomeCAreq.pem
-#
 
 function CreateCA {
         echo "CA key file not found : need to create CA first !"
@@ -21,6 +15,9 @@ function CreateCA {
         echo ""
 }
 
+# ####################################################
+# Usage
+
 function Usage {
         echo "Usage : $0 <cert_base_name>"
         echo ""
@@ -29,21 +26,13 @@ function Usage {
 }
 
 # ####################################################
-# Check existence of CA key file
+# Check CA key file
+
 if [ ! -f ./private/goHomeCAkey.pem ]
 then
         CreateCA
         exit 1
 fi
-
-
-# ####################################################
-# Check running as root
-#if [ `id -u` != 0 ]
-#then
-#        echo "$0 needs to be run as root"
-#        exit 1
-#fi
 
 # ####################################################
 # Check command line parameter : cert_base_name
@@ -57,19 +46,31 @@ fi
 name=$1
 
 # ####################################################
-# Creation .csr (demande de certificat)
+# Create .csr (certificat signing request)
+
 openssl req -new -newkey rsa:2048 -keyout ${name}.key.pem -out ${name}.csr.pem -config goHome.cnf
 
 # ####################################################
-# Creation certificat
+# Create / sign certificat
+
 openssl ca -config goHome.cnf -out ./certs/${name}.crt.pem -infiles ${name}.csr.pem
 
-# csr is now useless 
-rm -f ${name}.csr.pem
+if [ -f ./certs/${name}.crt.pem ]
+then
+	# csr is now useless 
+	rm -i ${name}.csr.pem
+fi
 
 # ####################################################
-# Creation pkcs12
+# Create pkcs12
+
 openssl pkcs12 -export -in ./certs/${name}.crt.pem -inkey ${name}.key.pem -out ${name}.p12 -name "Home (${name})"
 
-# key should not be kept as it is securly (depending on the pass used) stored in p12 keystore
-rm -f ${name}.key.pem
+if [ -f ${name}.p12 ]
+then
+	# key file is now useless as it is now stored in p12 keystore
+	rm -i ${name}.key.pem
+fi
+
+# ####################################################
+
