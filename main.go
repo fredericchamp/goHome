@@ -14,39 +14,6 @@ import (
 )
 
 // -----------------------------------------------
-const (
-	ProfilAdmin = 1 + iota
-	ProfilUser
-)
-
-type itemType int
-
-const (
-	ItemEntity itemType = 1 + iota
-	ItemSensor
-	ItemActor
-	ItemSensorAct
-
-// TODO	ItemStreamSensor
-)
-
-const (
-	DBTypeBool = 1 + iota
-	DBTypeInt
-	DBTypeFloat
-	DBTypeText
-	DBTypeDateTime
-	DBTypeBlob
-)
-
-const (
-	DurationMS = "ms"
-	DurationS  = "s"
-	DurationM  = "m"
-	DurationH  = "h"
-	DurationD  = "d"
-)
-
 // -----------------------------------------------
 // Version is x.y.z where
 // x = release version
@@ -65,7 +32,6 @@ const defaultSqlite3File = "/var/goHome/goHome.sqlite3"
 // -----------------------------------------------
 
 var dbfile = flag.String("sqlite3", defaultSqlite3File, "full path to sqlite3 database file")
-var debugFlag = flag.Bool("debug", false, "run in debug mode")
 
 // Reminder : v flags for glog
 // -v=2
@@ -125,9 +91,6 @@ func main() {
 
 	if glog.V(1) {
 		glog.Info("sqlite3 file = ", *dbfile)
-		if *debugFlag {
-			glog.Info("debug mode ON ")
-		}
 	}
 
 	// -----------------------------------------------

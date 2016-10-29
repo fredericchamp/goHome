@@ -9,31 +9,35 @@
 --
 create table goHome (id integer not null primary key, scope text, name text, value text);
 create table Item (id integer not null primary key, Name text, idProfil integer, idItemType integer, idMasterItem integer, icone blob);
-create table ItemField (id integer, idItem integer, nOrder integer, Name text, idDataType, Helper text, Regexp text );
-create table ItemFieldVal ( id integer, idField integer, intVal integer, floatVal float, textVal text, byteVal blob );
+create table ItemField (id integer, idItem integer, nOrder integer, Name text, idDataType, Helper text, Rules text );
+create table ItemFieldVal ( idObject integer, idField integer, intVal integer, floatVal float, textVal text, byteVal blob );
 create table HistoSensor (ts datetime, idObject integer, intVal integer, floatVal float, textVal text);
 create table HistoActor (ts datetime, idObject integer, Param text, Result text);
 
 insert into goHome values    ( 0, 'goHome', 'InterfaceVersion', '1');
-insert into goHome values    ( 1, 'goHome', 'port', '5100');
-insert into goHome values    ( 2, 'goHome', 'email', 'admin@goHomeDomain.net');
+insert into goHome values    ( 1, 'goHome', 'server_name', 'localhost');
+insert into goHome values    ( 2, 'goHome', 'https_port', '5100');
+insert into goHome values    ( 3, 'goHome', 'email', 'admin@goHomeDomain.net');
+insert into goHome values    ( 4, 'goHome', 'server_crt', '/var/goHome/certificats/server.crt.pem');
+insert into goHome values    ( 5, 'goHome', 'server_key', '/var/goHome/certificats/server.key.pem');
+insert into goHome values    ( 6, 'goHome', 'ca_crt', '/var/goHome/certificats/goHomeCAcert.pem');
+insert into goHome values    ( 7, 'goHome', 'UserItemId', '1');
 
+-- Note that userItemId param value in goHome table is directly link to the above insert statement
 insert into Item values      ( 1, 'User', 1, 1, 0, null);
 insert into ItemField values ( 1, 1, 1, 'FirstName', 4, '', '');
 insert into ItemField values ( 2, 1, 2, 'LastName', 4, '', '');
-insert into ItemField values ( 3, 1, 3, 'Email', 4, '', '');
+insert into ItemField values ( 3, 1, 3, 'Email', 4, '', '{"uniq":1,"regexp":"^[[:alnum:].\-_]*@[[:alnum:].\-_]*[.][[:alpha:]]{2,}$"}');
 insert into ItemField values ( 4, 1, 4, 'Phone', 4, '', '');
 insert into ItemField values ( 5, 1, 5, 'IdProfil', 2, '{"Administrator":1,"User":2}', '');
-insert into ItemField values ( 6, 1, 6, 'Cert', 6, '', '');
-insert into ItemField values ( 7, 1, 7, 'IsActive', 1, '{"Yes":1,"No":0}', '');
+insert into ItemField values ( 6, 1, 6, 'IsActive', 1, '{"Yes":1,"No":0}', '');
 
 insert into ItemFieldVal values (  1,  1, 0, 0, 'Main', null );
 insert into ItemFieldVal values (  1,  2, 0, 0, 'Administrator', null );
 insert into ItemFieldVal values (  1,  3, 0, 0, 'main.admin@goHomeDomain.com', null );
-insert into ItemFieldVal values (  1,  4, 0, 0, '+1234567890', null);
+insert into ItemFieldVal values (  1,  4, 0, 0, '1234567890', null);
 insert into ItemFieldVal values (  1,  5, 1, 0, '', null);
-insert into ItemFieldVal values (  1,  6, 0, 0, '', null);
-insert into ItemFieldVal values (  1,  7, 1, 0, '', null);
+insert into ItemFieldVal values (  1,  6, 1, 0, '', null);
 
 insert into Item values      ( 2, 'Sensor', 1, 2, 0, null);
 insert into ItemField values ( 8, 2, 1, 'Name', 4, '', '');
@@ -43,7 +47,7 @@ insert into ItemField values (11, 2, 4, 'IsInternal', 1, '{"Yes":1,"No":0}', '')
 insert into ItemField values (12, 2, 5, 'ReadCmd', 4, '', '');
 insert into ItemField values (13, 2, 6, 'ReadParam', 4, '', '');
 insert into ItemField values (14, 2, 7, 'Interval', 4, '', '');
-insert into ItemField values (15, 2, 8, 'IdDataType', 2, '{"Bool":1,"Int":2,"Float":3,"Text":4,"DateTime":4}', '');
+insert into ItemField values (15, 2, 8, 'IdDataType', 2, '{"Bool":1,"Int":2,"Float":3,"Text":4,"DateTime":5}', '');
 insert into ItemField values (16, 2, 9, 'IsActive', 1, '{"Yes":1,"No":0}', '');
 
 insert into ItemFieldVal values ( 10,  8, 0, 0, '%CPU', null );
@@ -121,6 +125,6 @@ insert into ItemField values (27, 4, 5, 'IsActive', 1, '{"Yes":1,"No":0}', '');
 
 insert into ItemFieldVal values ( 30, 23, 12, 0, '', null );
 insert into ItemFieldVal values ( 30, 24, 23, 0, '', null );
-insert into ItemFieldVal values ( 30, 25, 0, 0, '@value@ != @PrevValue@', null );
-insert into ItemFieldVal values ( 30, 26, 0, 0, '{"phone":"+123123456789","message":"Alarm @value@"}', null );
+insert into ItemFieldVal values ( 30, 25, 0, 0, '@lastVal@ != @prevVal@', null );
+insert into ItemFieldVal values ( 30, 26, 0, 0, '{"phone":"+123123456789","message":"Alarm @lastVal@"}', null );
 insert into ItemFieldVal values ( 30, 27, 1, 0, '', null );

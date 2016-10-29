@@ -324,5 +324,5 @@ func MemoryUsage(param1 string, param2 string) (string, error) {
 func SensorGPIO(param1 string, param2 string) (string, error) {
 	// TODO
 	glog.V(2).Info("GPIO Not Implemented")
-	return time.Now().String(), nil
+	return "1", nil
 }
