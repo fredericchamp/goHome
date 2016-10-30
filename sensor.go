@@ -37,7 +37,7 @@ func init() {
 // sensorSetup : read defined sensors from DB then create a ticker and start reading goroutine for each sensor
 func sensorSetup(db *sql.DB) (err error) {
 
-	sensorObjs, err := getDBObjectsForType(db, ItemSensor)
+	sensorObjs, err := getHomeObjectsForType(db, ItemSensor)
 	if err != nil {
 		return
 	}
@@ -45,7 +45,7 @@ func sensorSetup(db *sql.DB) (err error) {
 		glog.Info("\nSensor Objs\n", sensorObjs)
 	}
 
-	sensorActObjs, err := getDBObjectsForType(db, ItemSensorAct)
+	sensorActObjs, err := getHomeObjectsForType(db, ItemSensorAct)
 	if err != nil {
 		return
 	}
@@ -77,6 +77,9 @@ func sensorSetup(db *sql.DB) (err error) {
 		var duration time.Duration
 		var i int
 
+		if glog.V(2) {
+			glog.Info("Sensor Values", sensor.Values)
+		}
 		isActive, err := sensor.getIntVal("IsActive")
 		if err != nil {
 			return err
@@ -214,7 +217,6 @@ func sensorCleanup() {
 func recordSensorValue(t time.Time, sensor HomeObject, value string) {
 	db, err := openDB()
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	defer db.Close()

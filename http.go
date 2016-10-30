@@ -46,7 +46,6 @@ func startHTTPS(chanExit chan bool) {
 
 	db, err := openDB()
 	if err != nil {
-		glog.Error(err)
 		chanExit <- true
 		return
 	}
@@ -57,13 +56,11 @@ func startHTTPS(chanExit chan bool) {
 
 	serverName, err := getGlobalParam(db, -1, "goHome", "server_name")
 	if err != nil {
-		glog.Errorf("Error reading server_name param : %s", err)
 		chanExit <- true
 		return
 	}
 	value, err := getGlobalParam(db, -1, "goHome", "https_port")
 	if err != nil {
-		glog.Errorf("Error reading port# param : %s", err)
 		chanExit <- true
 		return
 	}
@@ -76,19 +73,16 @@ func startHTTPS(chanExit chan bool) {
 
 	serverCrtFileName, err := getGlobalParam(db, -1, "goHome", "server_crt")
 	if err != nil {
-		glog.Errorf("Error reading server_crt param : %s", err)
 		chanExit <- true
 		return
 	}
 	serverKeyFileName, err := getGlobalParam(db, -1, "goHome", "server_key")
 	if err != nil {
-		glog.Errorf("Error reading server_key param : %s", err)
 		chanExit <- true
 		return
 	}
 	caCertFileName, err := getGlobalParam(db, -1, "goHome", "ca_crt")
 	if err != nil {
-		glog.Errorf("Error reading ca_crt param : %s", err)
 		chanExit <- true
 		return
 	}
@@ -155,7 +149,7 @@ func itemTypeListHandler(w http.ResponseWriter, r *http.Request, postParam map[s
 	fmt.Fprintf(w, `{"ItemEntity":1,"ItemSensor":2,"ItemActor":3,"ItemSensorAct":4,"ItemStreamSensor":5}`)
 }
 
-// itemTypeListHandler : Handle HTTPS request to '/items'
+// itemListHandler : Handle HTTPS request to '/items'
 func itemListHandler(w http.ResponseWriter, r *http.Request, postParam map[string]string, email string, profil userProfil) {
 	// requested url can be :
 	// "/items"					=> return all existing items
@@ -191,9 +185,7 @@ func itemListHandler(w http.ResponseWriter, r *http.Request, postParam map[strin
 		return
 	}
 
-	// TODO filter items[] given user profil
-
-	jsonEncoded, err := json.Marshal(items)
+	jsonEncoded, err := json.Marshal(profilFilteredItems(profil, items))
 	if err != nil {
 		fmt.Fprintf(w, `{"error":"json.Marshal(items) failed"}`, email, profil)
 		return
@@ -220,7 +212,7 @@ func objectListHandler(w http.ResponseWriter, r *http.Request, postParam map[str
 			fmt.Fprintf(w, `{"error":"Fail to parse itemTypeId from (%s)"}`, r.URL.Path)
 			return
 		}
-		objs, err = getDBObjectsForType(nil, itemType(itemTypeId))
+		objs, err = getHomeObjectsForType(nil, itemType(itemTypeId))
 
 	case strings.Contains(r.URL.Path, "/itemId/"):
 		urlPart := strings.Split(r.URL.Path, "/")
@@ -229,7 +221,7 @@ func objectListHandler(w http.ResponseWriter, r *http.Request, postParam map[str
 			fmt.Fprintf(w, `{"error":"Fail to parse itemId from (%s)"}`, r.URL.Path)
 			return
 		}
-		objs, err = getDBObjects(nil, -1, itemId)
+		objs, err = getHomeObjects(nil, -1, itemId)
 
 	case strings.Contains(r.URL.Path, "/objectId/"):
 		urlPart := strings.Split(r.URL.Path, "/")
@@ -238,7 +230,7 @@ func objectListHandler(w http.ResponseWriter, r *http.Request, postParam map[str
 			fmt.Fprintf(w, `{"error":"Fail to parse objectId from (%s)"}`, r.URL.Path)
 			return
 		}
-		objs, err = getDBObjects(nil, objId, -1)
+		objs, err = getHomeObjects(nil, objId, -1)
 
 	default:
 		err = errors.New("dummy")
@@ -248,9 +240,7 @@ func objectListHandler(w http.ResponseWriter, r *http.Request, postParam map[str
 		return
 	}
 
-	// TODO filter items[] given user profil
-
-	jsonEncoded, err := json.Marshal(objs)
+	jsonEncoded, err := json.Marshal(profilFilteredObjects(profil, objs))
 	if err != nil {
 		fmt.Fprintf(w, `{"error":"json.Marshal(objs) failed"}`)
 		return

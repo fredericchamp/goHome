@@ -106,7 +106,7 @@ func main() {
 	}
 	db, err := openDB()
 	if err != nil {
-		glog.Error(err)
+		glog.Errorf("openDB failed : %s ... exiting", err)
 		return
 	}
 	defer db.Close()

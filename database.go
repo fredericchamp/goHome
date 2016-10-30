@@ -90,12 +90,13 @@ func initDBFile(dbfile string) error {
 }
 
 // openDB open a database connection and return it
-func openDB() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", dbFileName)
+func openDB() (db *sql.DB, err error) {
+	db, err = sql.Open("sqlite3", dbFileName)
 	if err != nil {
-		glog.Error(err)
+		glog.Errorf("Failed to open sqlite3(%s) : ", dbFileName, err)
+		return
 	}
-	return db, err
+	return
 }
 
 // getGlobalParam : fetch param value from db table goHome
@@ -105,7 +106,6 @@ func getGlobalParam(db *sql.DB, id int, scope string, name string) (value string
 	if db == nil {
 		db, err = openDB()
 		if err != nil {
-			glog.Error(err)
 			return
 		}
 		defer db.Close()
@@ -119,7 +119,7 @@ func getGlobalParam(db *sql.DB, id int, scope string, name string) (value string
 		rows, err = db.Query("select value from goHome where scope = ? and name = ?", scope, name)
 	}
 	if err != nil {
-		glog.Error(err)
+		glog.Errorf("Failed to read global param (%d,%s,%s) : %s ", id, scope, name, err)
 		return
 	}
 	defer rows.Close()
@@ -127,12 +127,12 @@ func getGlobalParam(db *sql.DB, id int, scope string, name string) (value string
 	rows.Next()
 	err = rows.Scan(&value)
 	if err != nil {
-		glog.Error(err)
+		glog.Errorf("Failed to read global param (%d,%s,%s) : %s ", id, scope, name, err)
 		return
 	}
 
 	if err = rows.Err(); err != nil {
-		glog.Error(err)
+		glog.Errorf("Failed to read global param (%d,%s,%s) : %s ", id, scope, name, err)
 		return
 	}
 	return
@@ -157,7 +157,6 @@ func getManageItems(db *sql.DB, idItem int, idItemType itemType) (items []Item, 
 	if db == nil {
 		db, err = openDB()
 		if err != nil {
-			glog.Error(err)
 			return
 		}
 		defer db.Close()
@@ -217,7 +216,6 @@ func getItemFields(db *sql.DB, idItem int, idObject int) (fields []ItemField, er
 	if db == nil {
 		db, err = openDB()
 		if err != nil {
-			glog.Error(err)
 			return
 		}
 		defer db.Close()
@@ -264,4 +262,44 @@ type ItemFieldVal struct {
 	ByteVal  []byte
 }
 
-// TODO reorg getDBObjects to move DB part here
+// getItemFieldValues select values for item fields.
+// If idObject > 0 return values for the given object
+// Else return all values for all objects with idField is part of idItem description
+func getItemFieldValues(db *sql.DB, idItem int, idObject int) (values []ItemFieldVal, err error) {
+	if db == nil {
+		db, err = openDB()
+		if err != nil {
+			return
+		}
+		defer db.Close()
+	}
+
+	var curVal ItemFieldVal
+	var rows *sql.Rows
+
+	if idObject > 0 {
+		rows, err = db.Query("select v.idObject, v.idField, v.intVal, v.floatVal, v.textVal, v.byteVal from ItemFieldVal v, ItemField f where v.idField = f.id and v.idObject = ? order by v.idObject, f.NOrder", idObject)
+	} else {
+		rows, err = db.Query("select v.idObject, v.idField, v.intVal, v.floatVal, v.textVal, v.byteVal from ItemFieldVal v, ItemField f where v.idField = f.id and f.idItem = ? order by v.idObject, f.NOrder", idItem)
+	}
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		err = rows.Scan(&curVal.IdObject, &curVal.IdField, &curVal.IntVal, &curVal.FloatVal, &curVal.TextVal, &curVal.ByteVal)
+		if err != nil {
+			glog.Error(err)
+			return
+		}
+		values = append(values, curVal)
+	}
+	if err = rows.Err(); err != nil {
+		glog.Error(err)
+		return
+	}
+
+	return
+}

@@ -22,7 +22,7 @@ func init() {
 // actorSetup : read defined actors from DB then create a ticker and start reading goroutine for each actor
 func actorSetup(db *sql.DB) (err error) {
 
-	actorObjs, err := getDBObjectsForType(db, ItemActor)
+	actorObjs, err := getHomeObjectsForType(db, ItemActor)
 	if err != nil {
 		return
 	}
@@ -125,12 +125,11 @@ func actorCleanup() {
 	}
 }
 
-// recordActorValue : store in DB param and result for an actor
+// recordActorResult : store in DB param and result for an actor
 // TODO : allow to store value outsite of main DB ?
 func recordActorResult(actor HomeObject, param string, result string) {
 	db, err := openDB()
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	defer db.Close()

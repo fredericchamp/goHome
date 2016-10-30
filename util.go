@@ -30,6 +30,8 @@ var userProfilNames = map[userProfil]string{
 	ProfilUser:  "User",
 }
 
+// -----------------------------------------------
+
 type itemType int
 
 const (
@@ -38,19 +40,19 @@ const (
 	ItemSensor
 	ItemActor
 	ItemSensorAct
-	// TODO :
-	ItemVideoSensor
+	ItemVideoSensor // TODO
 )
 
 var itemTypeNames = map[itemType]string{
-	ItemNone:      "None",
-	ItemEntity:    "Entity",
-	ItemSensor:    "Sensor",
-	ItemActor:     "Actor",
-	ItemSensorAct: "Actor trigger by sensor",
-	// TODO :
+	ItemNone:        "None",
+	ItemEntity:      "Entity",
+	ItemSensor:      "Sensor",
+	ItemActor:       "Actor",
+	ItemSensorAct:   "Actor trigger by sensor",
 	ItemVideoSensor: "VideoSensor",
 }
+
+// -----------------------------------------------
 
 const (
 	DBTypeBool = 1 + iota
@@ -69,6 +71,8 @@ var dbTypeNames = map[int]string{
 	DBTypeDateTime: "DateTime",
 	DBTypeBlob:     "Bytes",
 }
+
+// -----------------------------------------------
 
 const (
 	DurationMS = "ms"
@@ -222,73 +226,59 @@ func (obj HomeObject) getByteVal(fieldName string) (value []byte, err error) {
 	return
 }
 
-// getDBObject select object from db
-// If idObject > 0 return Object with Id = idObject else return all object for Item definition idItem
-// TODO reorg to move DB part to database.go
-func getDBObjects(db *sql.DB, idObject int, idItem int) (objs []HomeObject, err error) {
+// getHomeObjects read objects
+// If idObject > 0 return Object with Id = idObject
+// Else return all object for Item definition idItem
+// TODO : add linkedObjs loading ?
+func getHomeObjects(db *sql.DB, idObject int, idItem int) (objs []HomeObject, err error) {
 	if db == nil {
 		db, err = openDB()
 		if err != nil {
-			glog.Error(err)
 			return
 		}
 		defer db.Close()
 	}
 
 	var curObj HomeObject
-	var curVal ItemFieldVal
-	var curIdObject int
-	var rows *sql.Rows
 
+	// read fields
 	curObj.Fields, err = getItemFields(db, idItem, idObject)
 	if err != nil {
 		return
 	}
 
-	if idObject > 0 {
-		rows, err = db.Query("select v.idObject, v.idField, v.intVal, v.floatVal, v.textVal, v.byteVal from ItemFieldVal v, ItemField f where v.idField = f.id and v.idObject = ? order by v.idObject, f.NOrder", idObject)
-	} else {
-		rows, err = db.Query("select v.idObject, v.idField, v.intVal, v.floatVal, v.textVal, v.byteVal from ItemFieldVal v, ItemField f where v.idField = f.id and f.idItem = ? order by v.idObject, f.NOrder", idItem)
-	}
+	// read values
+	values, err := getItemFieldValues(db, idItem, idObject)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		err = rows.Scan(&curVal.IdObject, &curVal.IdField, &curVal.IntVal, &curVal.FloatVal, &curVal.TextVal, &curVal.ByteVal)
-		if curIdObject == 0 {
-			curIdObject = curVal.IdObject
-		}
-		if err != nil {
-			glog.Error(err)
-			return
-		}
-		if curIdObject != curVal.IdObject {
+	// build objs[] and assign values[] to each HomeObject instance
+	if len(values) > 0 {
+		startIdx := 0
+		curIdObject := values[startIdx].IdObject
+		for i, v := range values {
+			if v.IdObject == curIdObject {
+				continue
+			}
+			curObj.Values = values[startIdx:i]
 			objs = append(objs, curObj)
-			curObj.Values = make([]ItemFieldVal, 0, len(curObj.Fields))
-			curIdObject = curVal.IdObject
+			startIdx = i
+			curIdObject = values[startIdx].IdObject
 		}
-		curObj.Values = append(curObj.Values, curVal)
+		curObj.Values = values[startIdx:]
 	}
 	objs = append(objs, curObj)
-
-	if err = rows.Err(); err != nil {
-		glog.Error(err)
-		return
-	}
 
 	return
 }
 
-// getDBObject select object from db
+// getHomeObjectsForType read objects
 // Return all object ItemType idItemType
-func getDBObjectsForType(db *sql.DB, idItemType itemType) (objs []HomeObject, err error) {
+func getHomeObjectsForType(db *sql.DB, idItemType itemType) (objs []HomeObject, err error) {
 	if db == nil {
 		db, err = openDB()
 		if err != nil {
-			glog.Error(err)
 			return
 		}
 		defer db.Close()
@@ -301,7 +291,7 @@ func getDBObjectsForType(db *sql.DB, idItemType itemType) (objs []HomeObject, er
 
 	var lst []HomeObject
 	for _, item := range items {
-		lst, err = getDBObjects(db, -1, item.Id)
+		lst, err = getHomeObjects(db, -1, item.Id)
 		if err != nil {
 			return
 		}
@@ -333,7 +323,14 @@ func getEmailFromCert(peerCrt []*x509.Certificate) (email string, err error) {
 
 // loadUsers : load all users from DB into global userList
 // If force == false then only load if userList is empty
-func loadUsers(force bool) (nbUser int, err error) {
+func loadUsers(db *sql.DB, force bool) (nbUser int, err error) {
+	if db == nil {
+		db, err = openDB()
+		if err != nil {
+			return
+		}
+		defer db.Close()
+	}
 
 	userListLock.Lock()
 	defer userListLock.Unlock()
@@ -343,9 +340,8 @@ func loadUsers(force bool) (nbUser int, err error) {
 		return
 	}
 
-	value, err := getGlobalParam(nil, -1, "goHome", "UserItemId")
+	value, err := getGlobalParam(db, -1, "goHome", "UserItemId")
 	if err != nil {
-		glog.Errorf("Error reading UserItemId param : %s", err)
 		return
 	}
 	userItemId, err := strconv.Atoi(value)
@@ -355,7 +351,7 @@ func loadUsers(force bool) (nbUser int, err error) {
 	}
 
 	// read all users
-	userList, err = getDBObjects(nil, -1, userItemId)
+	userList, err = getHomeObjects(db, -1, userItemId)
 
 	nbUser = len(userList)
 
@@ -375,7 +371,7 @@ func getUserEmailAndProfil(peerCrt []*x509.Certificate) (email string, profil us
 		glog.Infof("Client email from cert = '%s'", email)
 	}
 
-	_, err = loadUsers(false)
+	_, err = loadUsers(nil, false)
 	if err != nil {
 		return
 	}
@@ -411,5 +407,31 @@ func getUserEmailAndProfil(peerCrt []*x509.Certificate) (email string, profil us
 		glog.Infof("No active user found for '%s'", email)
 	}
 
+	return
+}
+
+// profilFilteredItems : return an []Item with only Item matching user profil
+func profilFilteredItems(profil userProfil, items []Item) (filteredItems []Item) {
+	for _, item := range items {
+		if item.IdProfil < int(profil) {
+			continue
+		}
+		filteredItems = append(filteredItems, item)
+	}
+	return
+}
+
+// profilFilteredObjects : return an []HomeObject with only Item matching user profil
+func profilFilteredObjects(profil userProfil, objs []HomeObject) (filteredObjs []HomeObject) {
+	for _, obj := range objs {
+		objProfil, err := obj.getIntVal("IdProfil")
+		if err != nil {
+			continue
+		}
+		if objProfil < int(profil) {
+			continue
+		}
+		filteredObjs = append(filteredObjs, obj)
+	}
 	return
 }
