@@ -54,6 +54,15 @@ func startHTTPS(chanExit chan bool) {
 	//-----------------------------
 	// Read global param from DB
 
+	fileServerRoot, err := getGlobalParam(db, -1, "goHome", "fileserver_root")
+	if err != nil {
+		chanExit <- true
+		return
+	}
+	if glog.V(1) {
+		glog.Infof("FileServer ropot dir = '%s'", fileServerRoot)
+	}
+
 	serverName, err := getGlobalParam(db, -1, "goHome", "server_name")
 	if err != nil {
 		chanExit <- true
@@ -93,7 +102,9 @@ func startHTTPS(chanExit chan bool) {
 
 	//-----------------------------
 
-	http.HandleFunc("/", httpsHandler)
+	serverMux := http.NewServeMux() // rather than using http.defaultServeMux
+	serverMux.Handle("/files/", http.StripPrefix("/files/", http.FileServer(http.Dir(fileServerRoot))))
+	serverMux.HandleFunc("/", httpsHandler)
 
 	//-----------------------------
 
@@ -121,6 +132,7 @@ func startHTTPS(chanExit chan bool) {
 
 	server := &http.Server{
 		Addr:      fmt.Sprintf("%s:%d", serverName, port),
+		Handler:   serverMux,
 		TLSConfig: tlsConfig,
 	}
 
@@ -204,7 +216,7 @@ func objectListHandler(w http.ResponseWriter, r *http.Request, postParam map[str
 	// "/objects/objectId/nn"	=> return object for id = nn
 	var objs []HomeObject
 	var err error
-	switch { // TODO use postParam
+	switch { // TODO use postParam + check : r.URL.Path[len(r.URL.Path)-1]
 	case strings.Contains(r.URL.Path, "/itemTypeId/"):
 		urlPart := strings.Split(r.URL.Path, "/")
 		itemTypeId, err := strconv.Atoi(urlPart[len(urlPart)-1])
@@ -274,7 +286,7 @@ func httpsHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, header)
 		fmt.Fprintf(w, "<p>goHome HTTPS server<p>\n")
 		fmt.Fprintf(w, "<p>goHome version %s</p>\n", goHomeVersion)
-		fmt.Fprintf(w, "<p>URL requested : %s</p>\n", r.URL.Path)
+		fmt.Fprintf(w, "<p>URL requested : %s (no dedidated handler)</p>\n", r.URL.Path)
 		if profil <= ProfilNone {
 			fmt.Fprintf(w, "<p>Unknown client or insufficient privileges (email='%s', profil=%d)</p>", email, profil)
 		} else {
@@ -290,7 +302,11 @@ func httpsHandler(w http.ResponseWriter, r *http.Request) {
 // -----------------------------------------------
 
 func callActor() {
-	// name, id
+	// TODO callActor( name | id ) + param
+}
+
+func setSensorVal() {
+	// TODO setSensorVal( name | id ) + val
 }
 
 // -----------------------------------------------

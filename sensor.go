@@ -4,11 +4,9 @@ package main
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"go/constant"
 	"go/token"
 	"go/types"
-	"math/rand" // TODO : remove (for testing purpose only)
 	"strconv"
 	"strings"
 	"sync"
@@ -31,7 +29,6 @@ func init() {
 	RegisterInternalFunc(SensorFunc, "CpuUsage", CpuUsage)
 	RegisterInternalFunc(SensorFunc, "MemoryUsage", MemoryUsage)
 	RegisterInternalFunc(SensorFunc, "GPIO", SensorGPIO)
-	rand.Seed(2948536) // TODO : remove (for testing purpose only)
 }
 
 // sensorSetup : read defined sensors from DB then create a ticker and start reading goroutine for each sensor
@@ -312,19 +309,19 @@ func triggerSensorAct(sensorAct HomeObject, sensorName string, prevVal string, l
 // -----------------------------------------------
 
 func CpuUsage(param1 string, param2 string) (string, error) {
-	// TODO
+	// TODO CpuUsage
 	glog.V(2).Info("CpuUsage Not Implemented")
-	return fmt.Sprint(rand.Intn(100)), nil
+	return "99", nil
 }
 
 func MemoryUsage(param1 string, param2 string) (string, error) {
-	// TODO
+	// TODO MemoryUsage
 	glog.V(2).Info("MemoryUsage Not Implemented")
-	return fmt.Sprint(rand.Intn(100)), nil
+	return "99", nil
 }
 
 func SensorGPIO(param1 string, param2 string) (string, error) {
-	// TODO
+	// TODO SensorGPIO
 	glog.V(2).Info("GPIO Not Implemented")
 	return "1", nil
 }

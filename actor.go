@@ -149,13 +149,13 @@ func recordActorResult(actor HomeObject, param string, result string) {
 // -----------------------------------------------
 
 func ActorGPIO(param1 string, param2 string) (string, error) {
-	// TODO
+	// TODO ActorGPIO
 	glog.Info("GPIO Not Implemented")
 	return time.Now().String(), nil
 }
 
 func SerialATSMS(param1 string, param2 string) (string, error) {
-	// TODO
+	// TODO SerialATSMS
 	glog.Info("SerialATSMS Not Implemented")
 	return time.Now().String(), nil
 }

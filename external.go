@@ -8,7 +8,7 @@ import (
 )
 
 func LaunchExternalCmd(funcType internalFuncType, cmd string, param1 string, param2 string) (string, error) {
-	// TODO
+	// TODO LaunchExternalCmd
 	glog.Infof("LaunchExternalCmd Not Implemented %s(%s,%s)", cmd, param1, param2)
 	return time.Now().String(), nil
 }
