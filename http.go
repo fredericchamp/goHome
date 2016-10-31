@@ -60,7 +60,7 @@ func startHTTPS(chanExit chan bool) {
 		return
 	}
 	if glog.V(1) {
-		glog.Infof("FileServer ropot dir = '%s'", fileServerRoot)
+		glog.Infof("FileServer root dir = '%s'", fileServerRoot)
 	}
 
 	serverName, err := getGlobalParam(db, -1, "goHome", "server_name")

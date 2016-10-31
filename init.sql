@@ -21,7 +21,7 @@ insert into goHome values    ( 3, 'goHome', 'email', 'admin@goHomeDomain.net');
 insert into goHome values    ( 4, 'goHome', 'server_crt', '/var/goHome/certificats/server.crt.pem');
 insert into goHome values    ( 5, 'goHome', 'server_key', '/var/goHome/certificats/server.key.pem');
 insert into goHome values    ( 6, 'goHome', 'ca_crt', '/var/goHome/certificats/goHomeCAcert.pem');
-insert into goHome values    ( 7, 'goHome', 'fileserver_root', '/var/goHome/httpfilesever');
+insert into goHome values    ( 7, 'goHome', 'fileserver_root', '/var/goHome/www');
 insert into goHome values    ( 8, 'goHome', 'UserItemId', '1');
 
 -- Note that userItemId param value in goHome table is directly link to the above insert statement

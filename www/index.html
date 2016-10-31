@@ -1,0 +1,77 @@
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+	<title>goHome</title>
+	<meta name="description" content="goHome">
+	<meta name="viewport" content="width=device-width">
+	<script src="js/jquery.min.js"></script>
+	<script src="js/Chart.min.js"></script>
+	<link rel="stylesheet" type="text/css" title="main" href="css/main.css">
+	<script>
+	var myChart;
+	var snapshot="";
+	$(document).ready(function(){
+		$("#actionner").click(function(){
+			$.post("/",
+			{
+				command: $("#command").val(),
+				element: $("#element").val(),
+				keytype: $("#keytype").val(),
+				keyval: $("#keyval").val(),
+				param: " "
+			},
+			function(data, status){
+					$("#result").html(data);
+			});
+		});
+	});
+	</script>
+</head>
+<body>
+<center>
+<h1>Welcome</h1>
+<table class="std">
+	<tr>
+		<td>
+			<select id="command">
+				<option value="Read">Read</option>
+				<option value="Save">Save</option>
+				<option value="Delete">Delete</option>
+				<option value="Sensor Val">Sensor Val</option>
+				<option value="Action">Action</option>
+			</select>
+		</td>
+		<td>
+			<select id="element">
+				<option value="itemTypes">itemTypes</option>
+				<option value="items">items</option>
+				<option value="objects">objects</option>
+				<option value="sensorValue">Sensor values</option>
+				<option value="actorResult">Actor results</option>
+			</select>
+		</td>
+		<td>
+			<select id="keytype">
+				<option value="objects">objects</option>
+				<option value="items">items</option>
+				<option value="itemTypes">itemTypes</option>
+			</select>
+		</td>
+		<td><input id="keyval" type="number" min="0" max="9999"/></td>
+	</tr><tr>
+		<td class="label">JSON Param</td>
+		<td colspan="3"><input id="param" type="text" class="jsonparam" /></td>
+	</tr><tr>
+		<td> </td>
+		<td id="actionner" class="bouton" colspan="2" >Actionner</td>
+		<td> </td>
+	</tr><tr>
+		<td id="result" class="blackbox log" colspan="4">
+		<center><br>/<br><br></center>
+		</td>
+</table>
+</center>
+</body>
+</html>
+
+
