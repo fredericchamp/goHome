@@ -162,7 +162,7 @@ type Item struct {
 
 // getManageItems select manage Items from DB
 // If idItem > 0 return Item with given Id else return all Items
-func getManageItems(db *sql.DB, idItem int, idItemType itemType) (items []Item, err error) {
+func getManageItems(db *sql.DB, idItemType itemType, idItem int) (items []Item, err error) {
 	if db == nil {
 		db, err = openDB()
 		if err != nil {

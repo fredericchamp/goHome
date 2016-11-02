@@ -86,7 +86,7 @@ func loadUsers(db *sql.DB, force bool) (nbUser int, err error) {
 	}
 
 	// read all users
-	userList, err = getHomeObjects(db, -1, userItemId, ItemNone)
+	userList, err = getHomeObjects(db, ItemNone, userItemId, -1)
 
 	nbUser = len(userList)
 
@@ -123,11 +123,11 @@ func getUserFromCert(peerCrt []*x509.Certificate) (userObj HomeObject, err error
 		}
 		iProfil, err1 := obj.getIntVal("IdProfil")
 		if err1 != nil {
-			continue // ignore if non IdProfile field
+			continue // ignore if no IdProfile field
 		}
 		iActive, err1 := obj.getIntVal("IsActive")
 		if err1 != nil {
-			continue // ignore if non IsActive field
+			continue // ignore if no IsActive field
 		}
 		if glog.V(2) {
 			glog.Infof("Found active(%d) user for '%s' : id=%d profil=%d)", iActive, email, userObj.getId(), iProfil)
@@ -151,7 +151,7 @@ func checkApiUser(userObj HomeObject) (profil userProfil, err error) {
 	}
 	profil = userProfil(i)
 	if profil <= ProfilNone {
-		err = errors.New(`{"error":"insufficient privileges"}`)
+		err = errors.New("insufficient privileges")
 		return
 	}
 
@@ -160,7 +160,7 @@ func checkApiUser(userObj HomeObject) (profil userProfil, err error) {
 		return
 	}
 	if iActive <= 0 {
-		err = errors.New(`{"error":"Not an active user"}`)
+		err = errors.New("Not an active user")
 	}
 
 	return
@@ -180,17 +180,38 @@ func profilFilteredItems(profil userProfil, items []Item) (filteredItems []Item)
 // profilFilteredObjects : return an []HomeObject with only Item matching user profil
 func profilFilteredObjects(profil userProfil, objs []HomeObject) (filteredObjs []HomeObject) {
 	for _, obj := range objs {
-		// HomeObject without IdProfil must not be filtered out
-		if obj.hasField("IdProfil") {
-			objProfil, err := obj.getIntVal("IdProfil")
-			if err != nil {
-				continue
-			}
-			if objProfil < int(profil) {
-				continue
-			}
+		if checkAccessToObject(profil, obj) != nil {
+			continue
 		}
 		filteredObjs = append(filteredObjs, obj)
 	}
 	return
+}
+
+func checkAccessToObject(profil userProfil, obj HomeObject) error {
+	if !obj.hasField("IdProfil") {
+		// HomeObject without IdProfil have no access restriction
+		return nil
+	}
+	iProfil, err := obj.getIntVal("IdProfil")
+	if err != nil {
+		return err
+	}
+
+	if profil == ProfilNone || userProfil(iProfil) < profil {
+		return errors.New("insufficient privileges")
+	}
+
+	return nil
+}
+
+func checkAccessToObjectId(profil userProfil, objectid int) error {
+	objs, err := getHomeObjects(nil, ItemNone, -1, objectid)
+	if err != nil {
+		return err
+	}
+	if len(objs) <= 0 {
+		return errors.New(fmt.Sprintf("Object with Id=%d not found", objectid))
+	}
+	return checkAccessToObject(profil, objs[0])
 }

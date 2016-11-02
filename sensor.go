@@ -17,17 +17,6 @@ import (
 
 // -----------------------------------------------
 
-/*
-const ( TODO : remove
-	DurationMS = "ms"
-	DurationS  = "s"
-	DurationM  = "m"
-	DurationH  = "h"
-)
-*/
-
-// -----------------------------------------------
-
 const (
 	TagSensorName = "@sensorName@"
 	TagPrevVal    = "@prevVal@"
@@ -54,7 +43,7 @@ func init() {
 // sensorSetup : read defined sensors from DB then create a ticker and start reading goroutine for each sensor
 func sensorSetup(db *sql.DB) (err error) {
 
-	sensorObjs, err := getHomeObjects(db, 1, -1, ItemSensor)
+	sensorObjs, err := getHomeObjects(db, ItemSensor, 1, -1)
 	if err != nil {
 		return
 	}
@@ -87,26 +76,7 @@ func sensorSetup(db *sql.DB) (err error) {
 		if err != nil {
 			return err
 		}
-		/* TODO : remove
-		var duration time.Duration
-		var i int
-		switch {
-		case strings.HasSuffix(durationStr, DurationMS):
-			i, err = strconv.Atoi(strings.TrimSuffix(durationStr, DurationMS))
-			duration = time.Millisecond * time.Duration(i)
-		case strings.HasSuffix(durationStr, DurationS):
-			i, err = strconv.Atoi(strings.TrimSuffix(durationStr, DurationS))
-			duration = time.Second * time.Duration(i)
-		case strings.HasSuffix(durationStr, DurationM):
-			i, err = strconv.Atoi(strings.TrimSuffix(durationStr, DurationM))
-			duration = time.Minute * time.Duration(i)
-		case strings.HasSuffix(durationStr, DurationH):
-			i, err = strconv.Atoi(strings.TrimSuffix(durationStr, DurationH))
-			duration = time.Hour * time.Duration(i)
-		default:
-			err = errors.New("Unknown duration format")
-		}
-		*/
+
 		duration, err := time.ParseDuration(durationStr)
 		if err != nil {
 			glog.Errorf("Falied to parse duration (%s) : %s", durationStr, err)

@@ -205,7 +205,7 @@ func getLinkedObjects(db *sql.DB, objs []HomeObject) error {
 			return err
 		}
 		for _, linkedObjId := range lstLinkedObjId {
-			linkedObjs, err := getHomeObjects(db, linkedObjId, -1, ItemNone)
+			linkedObjs, err := getHomeObjects(db, ItemNone, -1, linkedObjId)
 			if err != nil {
 				return err
 			}
@@ -223,7 +223,7 @@ func getLinkedObjects(db *sql.DB, objs []HomeObject) error {
 // If idObject > 0 return object with Id = idObject
 // Else if idItem > 0 return all objects for Item definition idItem
 // Else Return all objects for ItemType idItemType
-func getHomeObjects(db *sql.DB, idObject int, idItem int, idItemType itemType) (objs []HomeObject, err error) {
+func getHomeObjects(db *sql.DB, idItemType itemType, idItem int, idObject int) (objs []HomeObject, err error) {
 	if db == nil {
 		db, err = openDB()
 		if err != nil {
@@ -274,7 +274,7 @@ func getHomeObjects(db *sql.DB, idObject int, idItem int, idItemType itemType) (
 	} else {
 
 		// get all items for idItemType
-		items, err1 := getManageItems(db, -1, idItemType)
+		items, err1 := getManageItems(db, idItemType, -1)
 		if err1 != nil {
 			err = err1
 			return
@@ -282,7 +282,7 @@ func getHomeObjects(db *sql.DB, idObject int, idItem int, idItemType itemType) (
 
 		// for each item, read objects
 		for _, item := range items {
-			lstObjs, err1 := getHomeObjects(db, -1, item.Id, ItemNone)
+			lstObjs, err1 := getHomeObjects(db, ItemNone, item.Id, -1)
 			if err1 != nil {
 				err = err1
 				return

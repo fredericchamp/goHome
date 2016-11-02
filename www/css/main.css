@@ -59,9 +59,10 @@ td.blackbox {
 	padding: 2px;
 }
 
-td.log {
+td.result {
 	font-size: 90%;
 	background-color:#CCCCCC
+	width: 450px;
 }
 
 input.jsonparam {

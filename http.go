@@ -16,56 +16,35 @@ import (
 	"github.com/golang/glog"
 )
 
-const header = `<!-- HEADER -->
-<html>
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>goHome</title>
-</head>
-<body>
-`
+// -----------------------------------------------
 
-const footer = `<!-- FOOTER -->
-<br><br>
-<p align="center">-*-</p>
-<p align="center">%s</p>
-</body>
-</html>
-`
+// Accepted Format = {"command":"api...", "itemtypeid":id, "itemid":id, "objectid":id, "startts":ts, "endts":ts, "jsonparam":{...}}
+
+type apiCommand string
 
 const (
-	paramNameCmd   = "command"
-	paramNameElem  = "element"
-	paramNameKeyT  = "keytype"
-	paramNameKeyV  = "keyval"
-	paramNameJsonP = "jsonparam"
-	paramNameObjId = "objectid"
-	paramNameStart = "startts"
-	paramNameEnd   = "endts"
+	apiReadItemType  apiCommand = "ReadItemTypes"
+	apiReadItem                 = "ReadItems"
+	apiReadObject               = "ReadObject"
+	apiReadSensorVal            = "ReadSensorVal"
+	apiReadActorRes             = "ReadActorRes"
+	apiSaveItem                 = "SaveItems"
+	apiSaveObject               = "SaveObject"
+	apiDeleteItem               = "DeleteItems"
+	apiDeleteObject             = "DeleteObject"
+	apiSendSensorVal            = "SendSensorVal"
+	apiTriggerActor             = "TriggerActor"
 )
 
-const (
-	apiReadCommand      = "Read"
-	apiSaveCommand      = "Save"
-	apiDeleteCommand    = "Delete"
-	apiActionCommand    = "Action"
-	apiSensorValCommand = "Sensor Val"
-)
-
-const (
-	elemItemType    = "itemType"
-	elemItem        = "item"
-	elemObject      = "object"
-	elemSensorValue = "sensorValue"
-	elemActorResult = "actorResult"
-)
-
-const (
-	keyItemType = "itemType"
-	keyItem     = "item"
-	keyObject   = "object"
-)
+type apiCommandSruct struct {
+	Command    apiCommand
+	Itemtypeid itemType
+	Itemid     int
+	Objectid   int
+	Startts    int64
+	Endts      int64
+	Jsonparam  string
+}
 
 // -----------------------------------------------
 
@@ -92,308 +71,242 @@ func getFormIntVal(form url.Values, key string, idx int) (intVal int, err error)
 	return
 }
 
-// apiReadHistoValues
-func apiReadHistoValues(w http.ResponseWriter, r *http.Request, element string, userObj HomeObject, profil userProfil) (err error) {
-	objectId, err := getFormIntVal(r.Form, paramNameObjId, 0)
-	if err != nil {
-		fmt.Fprintf(w, `{"error":"%s"}`, err.Error())
-		return
-	}
-	startTS, err := getFormIntVal(r.Form, paramNameStart, 0)
-	if err != nil {
-		return
-	}
-	endTS, err := getFormIntVal(r.Form, paramNameEnd, 0)
-	if err != nil {
-		return
-	}
-
-	last := true // TODO
-
-	// TODO : check user has access to objectId given his profil
-
-	var sVals []HistoSensor
-	var aVals []HistoActor
-	switch element {
-	case elemSensorValue:
-		sVals, err = getHistoSensor(nil, objectId, last, time.Unix(int64(startTS), 0), time.Unix(int64(endTS), 0))
-	case elemActorResult:
-		aVals, err = getHistActor(nil, objectId, last, time.Unix(int64(startTS), 0), time.Unix(int64(endTS), 0))
-	default:
-		defaultResponse(w, r, userObj, profil, err)
-		return
-	}
-	if err != nil {
-		fmt.Fprintf(w, `{"error":"apiReadHistoValues failed for (%s)"}`, r.Form)
-		return
-	}
-
-	if glog.V(1) {
-		glog.Infof("Read histo %s (%d, %d, %d)", element, objectId, startTS, endTS)
-	}
-
-	var jsonEncoded []byte
-	switch element {
-	case elemSensorValue:
-		jsonEncoded, err = json.Marshal(sVals)
-	case elemActorResult:
-		jsonEncoded, err = json.Marshal(aVals)
-	}
-	if err != nil {
-		fmt.Fprint(w, `{"error":"json.Marshal(_vals) failed"}`)
-		return
-	}
-
-	w.Write(jsonEncoded)
-	return
-}
-
-func getPostId(keytype string, id int) (itemTypeId itemType, itemId int, objectId int) {
-	switch keytype {
-	case keyItemType:
-		itemTypeId = itemType(id)
-	case keyItem:
-		itemId = id
-	case keyObject:
-		objectId = id
-	default:
-	}
-	return
-}
-
-// apiReadObjects
-func apiReadObjects(w http.ResponseWriter, r *http.Request, userObj HomeObject, profil userProfil) (err error) {
-	keytype, err := getFormStrVal(r.Form, paramNameKeyT, 0)
-	if err != nil {
-		fmt.Fprintf(w, `{"error":"%s"}`, err.Error())
-		return
-	}
-
-	keyval, err := getFormIntVal(r.Form, paramNameKeyV, 0)
-	if err != nil {
-		return
-	}
-	itemTypeId, itemId, objectId := getPostId(keytype, keyval)
-
-	objs, err := getHomeObjects(nil, objectId, itemId, itemTypeId)
-	if err != nil {
-		fmt.Fprintf(w, `{"error":"apiReadObjects failed for (%s)"}`, r.Form)
-		return
-	}
-	if glog.V(1) {
-		glog.Infof("Read objects (%d, %d, %d)", objectId, itemId, itemTypeId)
-	}
-
-	jsonEncoded, err := json.Marshal(profilFilteredObjects(profil, objs))
-	if err != nil {
-		fmt.Fprint(w, `{"error":"json.Marshal(objs) failed"}`)
-		return
-	}
-
-	w.Write(jsonEncoded)
-	return
-}
-
-// apiReadItems
-func apiReadItems(w http.ResponseWriter, r *http.Request, userObj HomeObject, profil userProfil) (err error) {
-	keytype, err := getFormStrVal(r.Form, paramNameKeyT, 0)
-	if err != nil {
-		fmt.Fprintf(w, `{"error":"%s"}`, err.Error())
-		return
-	}
-
-	keyval, err := getFormIntVal(r.Form, paramNameKeyV, 0)
-	if err != nil {
-		return
-	}
-	itemTypeId, itemId, _ := getPostId(keytype, keyval)
-
-	items, err := getManageItems(nil, itemId, itemTypeId)
-	if err != nil {
-		fmt.Fprintf(w, `{"error":"apiReadItems failed for (%s)"}`, r.Form)
-		return
-	}
-	if glog.V(1) {
-		glog.Infof("Read managed items (%d, %d)", itemId, itemTypeId)
-	}
-
-	jsonEncoded, err := json.Marshal(profilFilteredItems(profil, items))
-	if err != nil {
-		fmt.Fprint(w, `{"error":"json.Marshal(items) failed"}`)
-		return
-	}
-
-	w.Write(jsonEncoded)
-	return
-}
-
-// apiRead
-func apiRead(w http.ResponseWriter, r *http.Request, userObj HomeObject, profil userProfil) {
-
-	element, err := getFormStrVal(r.Form, paramNameElem, 0)
-	if err != nil {
-		fmt.Fprintf(w, `{"error":"%s"}`, err.Error())
-		return
-	}
-
-	switch element {
-	case elemItemType:
-		fmt.Fprintf(w, `{"ItemEntity":1,"ItemSensor":2,"ItemActor":3,"ItemSensorAct":4,"ItemStreamSensor":5}`)
-		if glog.V(1) {
-			glog.Info("Read itemTypes")
-		}
-	case elemItem:
-		apiReadItems(w, r, userObj, profil)
-	case elemObject:
-		apiReadObjects(w, r, userObj, profil)
-	case elemSensorValue:
-	case elemActorResult:
-		apiReadHistoValues(w, r, element, userObj, profil)
-	default:
-		defaultResponse(w, r, userObj, profil, err)
-		return
-	}
-}
-
-// apiSave
-func apiSave(w http.ResponseWriter, r *http.Request, userObj HomeObject, profil userProfil) {
-
-	element, err := getFormStrVal(r.Form, paramNameElem, 0)
-	if err != nil {
-		fmt.Fprintf(w, `{"error":"%s"}`, err.Error())
-		return
-	}
-
-	switch element {
-	case elemItemType:
-		fmt.Fprintf(w, `{"error":"apiSave : can not save '%s'"}`, element)
-		return
-	case elemItem: // TODO save
-		// Unmarchal jsonparam to Item
-		// check item content
-		// check profil rights on item
-		// save item to DB (update or insert)
-	case elemObject: // TODO save
-		// Unmarchal jsonparam to []ItemFieldVal
-		// Identify corresponding item
-		// check profil rights on item
-		// Build HomeObject and check []ItemFieldVal regarding item description
-		// If id is provided :
-		//		check itemId in DB match itemId deduce from jsonparam content
-		//		check profil rights on existing object
-		//		check profil rights on update object
-		//		update db
-		// Else
-		//		check profil rights on new object
-		//		insert into DB with new Id allocation
-	case elemSensorValue: // TODO save
-		// Unmarchal jsonparam to SensorVal
-		// load sensor using getHomeObjects
-		// add sensor.linkedObjs if not loaded by getHomeObjects
-		// Call handleSensorValue(time.Now(), sensor, value)
-	default:
-		defaultResponse(w, r, userObj, profil, err)
-		return
-	}
-}
-
-// apiDelete
-func apiDelete(w http.ResponseWriter, r *http.Request, userObj HomeObject, profil userProfil) {
-
-	objectId, err := getFormIntVal(r.Form, paramNameObjId, 0)
-	if err != nil {
-		fmt.Fprintf(w, `{"error":"%s"}`, err.Error())
-		return
-	}
-
-	objs, err := getHomeObjects(nil, objectId, 0, ItemNone)
-	if err != nil {
-		fmt.Fprintf(w, `{"error":"apiDelete Object for id=%d : not found"}`, objectId)
-		return
-	}
-
-	objs = profilFilteredObjects(profil, objs)
-	if len(objs) <= 0 {
-		fmt.Fprintf(w, `{"error":"apiDelete Object for id=%d : insufficient privileges"}`, objectId)
-		return
-	}
-
-	// TODO delete object objectId from DB
-
-}
-
 // -----------------------------------------------
 
-// defaultResponse : when a request is not properly form or handle
-func defaultResponse(w http.ResponseWriter, r *http.Request, userObj HomeObject, profil userProfil, err error) {
-	if err != nil {
-		fmt.Fprint(w, err.Error())
-		return
-	}
-	fmt.Fprintf(w, header)
-	fmt.Fprintf(w, "<p>goHome HTTPS server<p>\n")
-	fmt.Fprintf(w, "<p>goHome version %s</p>\n", goHomeVersion)
-	fmt.Fprintf(w, "<p>URL requested : %s </p>\n", r.URL.Path)
-	fmt.Fprintf(w, "<p>Post params : %s</p>\n", r.Form)
-	fmt.Fprintf(w, "<p>User : %s</p>\n", userObj)
-
-	fmt.Fprintf(w, footer, time.Now().String())
-}
+// defaultResponse : when a request is not properly form or handle ... was useful during dev
+//func defaultResponse(w http.ResponseWriter, r *http.Request, userObj HomeObject, profil userProfil, err error) {
+//	const header = `<!-- HEADER -->
+//<html>
+//<head>
+//<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+//<meta name="viewport" content="width=device-width, initial-scale=1">
+//<title>goHome</title>
+//</head>
+//<body>
+//`
+//	const footer = `<!-- FOOTER -->
+//<br><br>
+//<p align="center">-*-</p>
+//<p align="center">%s</p>
+//</body>
+//</html>
+//`
+//	if err != nil {
+//		fmt.Fprint(w, err.Error())
+//		return
+//	}
+//	fmt.Fprintf(w, header)
+//	fmt.Fprintf(w, "<p>goHome HTTPS server<p>\n")
+//	fmt.Fprintf(w, "<p>goHome version %s</p>\n", goHomeVersion)
+//	fmt.Fprintf(w, "<p>URL requested : %s </p>\n", r.URL.Path)
+//	fmt.Fprintf(w, "<p>Post params : %s</p>\n", r.Form)
+//	fmt.Fprintf(w, "<p>User : %s</p>\n", userObj)
+//	fmt.Fprintf(w, footer, time.Now().String())
+//}
 
 // -----------------------------------------------
 // URL handlers
 
 // TODO proxy (video stream)
 
-// apiHandler : request API requests
+// apiHandler : handle API requests
 func apiHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 
 	userObj, err := getUserFromCert(r.TLS.PeerCertificates)
 	if err != nil {
-		fmt.Fprintf(w, `{"error":"%s"}`, err.Error())
+		fmt.Fprintf(w, `{"error":"%s"}`, err)
 		return
 	}
 
 	profil, err := checkApiUser(userObj)
 	if err != nil {
-		fmt.Fprintf(w, `{"error":"%s"}`, err.Error())
+		fmt.Fprintf(w, `{"error":"%s"}`, err)
 		return
 	}
 
 	err = r.ParseForm()
 	if err != nil {
-		fmt.Fprintf(w, `{"error":"Form parse error '%s' for (%s)"}`, err.Error(), r.Form)
+		fmt.Fprintf(w, `{"error":"Form parse error '%s' for (%s)"}`, err, r.Form)
 		return
 	}
 	if glog.V(2) {
-		glog.Info(r.Form)
+		glog.Infof("User profil %d, Form=", profil, r.Form)
 	}
 
-	if len(r.Form) < 5 {
-		fmt.Fprintf(w, `{"error":"Missing parameters in (%s)"}`, r.Form)
-		return
-	}
-
-	command, err := getFormStrVal(r.Form, paramNameCmd, 0)
+	command, err := getFormStrVal(r.Form, "command", 0)
 	if err != nil {
-		fmt.Fprintf(w, `{"error":"Command not found in (%s)"}`, r.Form)
+		fmt.Fprintf(w, `{"error":"%s"}`, err)
 		return
 	}
 
-	switch command {
-	case apiReadCommand:
-		apiRead(w, r, userObj, profil)
-	case apiSaveCommand:
-		apiSave(w, r, userObj, profil)
-	case apiDeleteCommand:
-		apiDelete(w, r, userObj, profil)
-	case apiSensorValCommand:
-	case apiActionCommand:
-	default:
-		defaultResponse(w, r, userObj, profil, errors.New(fmt.Sprintf(`{"error":"Unhandle command '%s' in (%s)"}`, command, r.Form)))
+	var jsonCmde apiCommandSruct
+	err = json.Unmarshal([]byte(command), &jsonCmde)
+	if err != nil {
+		glog.Errorf("Fail to unmarshal apiCommandSruct (%s) : %s", command, err)
 		return
 	}
+
+	if glog.V(2) {
+		glog.Info(jsonCmde)
+	}
+
+	switch jsonCmde.Command {
+
+	case apiReadItemType:
+		if glog.V(1) {
+			glog.Info(jsonCmde.Command)
+		}
+		fmt.Fprint(w, `{"ItemEntity":1,"ItemSensor":2,"ItemActor":3,"ItemSensorAct":4,"ItemStreamSensor":5}`)
+		return
+
+	case apiReadItem:
+		if glog.V(1) {
+			glog.Infof("%s (type=%d, item=%d)", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid)
+		}
+
+		items, err := getManageItems(nil, jsonCmde.Itemtypeid, jsonCmde.Itemid)
+		if err != nil {
+			fmt.Fprintf(w, `{"error":"%s failed for (%s) : %s"}`, jsonCmde.Command, r.Form, err)
+			return
+		}
+
+		jsonEncoded, err := json.Marshal(profilFilteredItems(profil, items))
+		if err != nil {
+			fmt.Fprintf(w, `{"error":"%s failed for (%s) : %s"}`, jsonCmde.Command, r.Form, err)
+			return
+		}
+		w.Write(jsonEncoded)
+		return
+
+	case apiReadObject:
+		if glog.V(1) {
+			glog.Infof("%s (type=%d, item=%d, obj=%d)", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid)
+		}
+
+		objs, err := getHomeObjects(nil, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid)
+		if err != nil {
+			fmt.Fprintf(w, `{"error":"%s failed for (%s) : %s"}`, jsonCmde.Command, r.Form, err)
+			return
+		}
+
+		jsonEncoded, err := json.Marshal(profilFilteredObjects(profil, objs))
+		if err != nil {
+			fmt.Fprintf(w, `{"error":"%s failed for (%s) : %s"}`, jsonCmde.Command, r.Form, err)
+			return
+		}
+
+		w.Write(jsonEncoded)
+		return
+
+	case apiReadSensorVal:
+		if glog.V(1) {
+			glog.Infof("%s (%d, %d, %d)", jsonCmde.Command, jsonCmde.Objectid, jsonCmde.Startts, jsonCmde.Endts)
+		}
+
+		last := false
+		if (jsonCmde.Startts <= 0 && jsonCmde.Endts <= 0) || jsonCmde.Startts > time.Now().Unix() {
+			last = true
+		}
+
+		err = checkAccessToObjectId(profil, jsonCmde.Objectid)
+		if err != nil {
+			fmt.Fprintf(w, `{"error":"%s"}`, err)
+			return
+		}
+
+		sVals, err := getHistoSensor(nil, jsonCmde.Objectid, last, time.Unix(jsonCmde.Startts, 0), time.Unix(jsonCmde.Endts, 0))
+		if err != nil {
+			fmt.Fprintf(w, `{"error":"%s failed for (%s) : %s"}`, jsonCmde.Command, r.Form, err)
+			return
+		}
+
+		jsonEncoded, err := json.Marshal(sVals)
+		if err != nil {
+			fmt.Fprintf(w, `{"error":"%s failed for (%s) : %s"}`, jsonCmde.Command, r.Form, err)
+			return
+		}
+
+		w.Write(jsonEncoded)
+		return
+
+	case apiReadActorRes:
+		if glog.V(1) {
+			glog.Infof("%s (%d, %d, %d)", jsonCmde.Command, jsonCmde.Objectid, jsonCmde.Startts, jsonCmde.Endts)
+		}
+
+		last := false
+		if (jsonCmde.Startts <= 0 && jsonCmde.Endts <= 0) || jsonCmde.Startts > time.Now().Unix() {
+			last = true
+		}
+
+		err = checkAccessToObjectId(profil, jsonCmde.Objectid)
+		if err != nil {
+			fmt.Fprintf(w, `{"error":"%s"}`, err)
+			return
+		}
+
+		aVals, err := getHistActor(nil, jsonCmde.Objectid, last, time.Unix(jsonCmde.Startts, 0), time.Unix(jsonCmde.Endts, 0))
+		if err != nil {
+			fmt.Fprintf(w, `{"error":"%s failed for (%s) : %s"}`, jsonCmde.Command, r.Form, err)
+			return
+		}
+
+		jsonEncoded, err := json.Marshal(aVals)
+		if err != nil {
+			fmt.Fprintf(w, `{"error":"%s failed for (%s) : %s"}`, jsonCmde.Command, r.Form, err)
+			return
+		}
+
+		w.Write(jsonEncoded)
+		return
+
+	case apiSaveItem: // TODO
+		// Unmarchal jsonparam to Item
+		// check item content
+		// check profil rights on item
+		// save item to DB (update or insert)
+		fmt.Fprintf(w, `{"error":"Command %s not ready"}`, jsonCmde.Command)
+		return
+
+	case apiSaveObject: // TODO
+		// Unmarchal jsonparam to []ItemFieldVal
+		// Identify corresponding item
+		// check profil rights on item
+		// Build HomeObject and check []ItemFieldVal regarding item description
+		// If id is provided :
+		//		check itemId in DB match itemId deduce from jsonparam content
+		//		check profil rights on existing object values
+		//		check profil rights on new object values
+		//		update db
+		// Else
+		//		check profil rights on new object
+		//		insert into DB with new Id allocation
+		fmt.Fprintf(w, `{"error":"Command %s not ready"}`, jsonCmde.Command)
+		return
+
+	case apiDeleteItem, apiDeleteObject:
+		fmt.Fprint(w, `{"error":"Delete not available : use apiSave* to toggle IsActive flag or use manual access to DB"}`)
+		return
+
+	case apiSendSensorVal: // TODO
+		// Unmarchal jsonparam to SensorVal
+		// load sensor using getHomeObjects
+		// Call handleSensorValue(ts, sensor, value)
+		fmt.Fprintf(w, `{"error":"Command %s not ready"}`, jsonCmde.Command)
+		return
+
+	case apiTriggerActor: // TODO
+		fmt.Fprintf(w, `{"error":"Command %s not ready"}`, jsonCmde.Command)
+		return
+
+	default:
+		fmt.Fprintf(w, `{"error":"Unhandle command '%s' in (%s)"}`, jsonCmde.Command, r.Form)
+		return
+	}
+
+	return
+
 }
 
 // -----------------------------------------------
@@ -472,6 +385,7 @@ func startHTTPS(chanExit chan bool) {
 
 	serverMux := http.NewServeMux() // Create dedicated ServeMux, rather than using http.defaultServeMux
 	// Note : access to "/api", apiHandler required a registered user in DB
+	serverMux.HandleFunc("/json", apiHandler)
 	serverMux.HandleFunc("/api", apiHandler)
 	// Note : access to "/", FileServer only required a valid certificat (valid regarding caCertPool)
 	serverMux.Handle("/", http.FileServer(http.Dir(fileServerRoot)))
@@ -515,32 +429,4 @@ func startHTTPS(chanExit chan bool) {
 		glog.Errorf("Error starting HTTPS ListenAndServeTLS : %s ... exiting", err)
 		chanExit <- true
 	}
-}
-
-// -----------------------------------------------
-// -----------------------------------------------
-
-// -----------------------------------------------
-// Utilities
-
-// -----------------------------------------------
-
-func callActor() {
-	// TODO callActor( name | id ) + param
-}
-
-func setSensorVal() {
-	// TODO setSensorVal( name | id ) + val
-}
-
-// -----------------------------------------------
-
-func writeObject() {
-
-	// TODO writeObject if it's a user => loadUsers(true) when finish
-}
-
-func deleteObject() {
-
-	// TODO deleteObject if it's a user => loadUsers(true) when finish
 }
