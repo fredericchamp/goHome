@@ -2,7 +2,7 @@
 
 body {
 	background-color: white;
-	background-image: url(/files/images/PlageMoorea.jpg);
+	background-image: url(/images/PlageMoorea.jpg);
 	background-repeat: no-repeat;
 	background-attachment: fixed;
 }
@@ -17,11 +17,11 @@ h2 {
 
 table{
 /*	border: 1px solid blue;*/
+	background-color:#CCCCCC
 }
 
 td {
 	text-align: center;
-	width: 150px;
 }
 
 /*

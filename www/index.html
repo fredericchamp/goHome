@@ -8,21 +8,79 @@
 	<script src="js/Chart.min.js"></script>
 	<link rel="stylesheet" type="text/css" title="main" href="css/main.css">
 	<script>
-	var myChart;
-	var snapshot="";
 	$(document).ready(function(){
-		$("#actionner").click(function(){
-			$.post("/",
+		$("#read").click(function(){
+			$.post("/api",
 			{
-				command: $("#command").val(),
-				element: $("#element").val(),
+				command: "Read",
+				element: $("#element_read").val(),
 				keytype: $("#keytype").val(),
 				keyval: $("#keyval").val(),
-				param: " "
+				jsonparam: $("#jsonparam_read").val()
 			},
 			function(data, status){
-					$("#result").html(data);
+				$("#result_read").html(data);
 			});
+		});
+		$("#read_reset").click(function(){
+			$("#result_read").html("<center><br>/<br><br></center>");
+		});
+		$("#read_histo").click(function(){
+			$.post("/api",
+			{
+				command: "Read",
+				element: $("#element_histo").val(),
+				objectid: $("#objectid_histo").val()
+				startts: $("#start").val(),
+				endts: $("#end").val(),
+				jsonparam: $("#jsonparam_histo").val()
+			},
+			function(data, status){
+				$("#result_histo").html(data);
+			});
+		});
+		$("#histo_reset").click(function(){
+			$("#result_histo").html("<center><br>/<br><br></center>");
+		});
+		$("#save").click(function(){
+			$.post("/api",
+			{
+				command: "Save",
+				element: $("#element_save").val(),
+				jsonparam: $("#jsonparam_save").val()
+			},
+			function(data, status){
+					$("#result_save").html(data);
+			});
+		});
+		$("#save_reset").click(function(){
+			$("#result_save").html("<center><br>/<br><br></center>");
+		});
+		$("#delete").click(function(){
+			$.post("/api",
+			{
+				command: "Delete",
+				objectid: $("#objectid_del").val()
+			},
+			function(data, status){
+					$("#result_del").html(data);
+			});
+		});
+		$("#del_reset").click(function(){
+			$("#result_del").html("<center><br>/<br><br></center>");
+		});
+		$("#actor").click(function(){
+			$.post("/api",
+			{
+				command: "Action",
+				jsonparam: $("#jsonparam_act").val()
+			},
+			function(data, status){
+					$("#result_act").html(data);
+			});
+		});
+		$("#act_reset").click(function(){
+			$("#result_act").html("<center><br>/<br><br></center>");
 		});
 	});
 	</script>
@@ -32,41 +90,109 @@
 <h1>Welcome</h1>
 <table class="std">
 	<tr>
-		<td>
-			<select id="command">
-				<option value="Read">Read</option>
-				<option value="Save">Save</option>
-				<option value="Delete">Delete</option>
-				<option value="Sensor Val">Sensor Val</option>
-				<option value="Action">Action</option>
+		<td>Read </td>
+		<td>some
+			<select id="element_read">
+				<option value="itemType">itemType</option>
+				<option value="item">item</option>
+				<option value="object">object</option>
 			</select>
 		</td>
-		<td>
-			<select id="element">
-				<option value="itemTypes">itemTypes</option>
-				<option value="items">items</option>
-				<option value="objects">objects</option>
+		<td>using key ( 
+			<select id="keytype">
+				<option value="object">object</option>
+				<option value="item">item</option>
+				<option value="itemType">itemType</option>
+			</select>
+		</td>
+		<td>) = <input id="keyval" type="number" min="0" max="9999"/></td>
+	</tr><tr>
+		<td class="label"></td>
+		<td colspan="3"><input id="jsonparam_histo" type="text" class="jsonparam" /></td>
+	</tr><tr>
+		<td></td>
+		<td id="read" class="bouton">Read</td>
+		<td id="read_reset" class="bouton">Reset</td>
+		<td></td>
+	</tr><tr>
+		<td id="result_histo" class="blackbox log" colspan="4">
+		<center><br>/<br><br></center>
+		</td>
+	</tr><tr>
+		<td colspan="4"><br><br></td>
+	</tr><tr>
+		<td>Read Histo</td>
+		<td>some
+			<select id="element_histo">
 				<option value="sensorValue">Sensor values</option>
 				<option value="actorResult">Actor results</option>
 			</select>
 		</td>
+		<td>idObject <input id="objectid_histo" type="number" min="0" max="9999"/></td>
+		<td>[<input id="start" type="number" value="1478022298"/>, <input id="end" type="number"/>]</td>
+	</tr><tr>
+		<td class="label"></td>
+		<td colspan="3"><input id="jsonparam_histo" type="text" class="jsonparam" /></td>
+	</tr><tr>
+		<td></td>
+		<td id="read" class="bouton">Read</td>
+		<td id="read_reset" class="bouton">Reset</td>
+		<td></td>
+	</tr><tr>
+		<td id="result_histo" class="blackbox log" colspan="4">
+		<center><br>/<br><br></center>
+		</td>
+	</tr><tr>
+		<td colspan="4"><br><br></td>
+	</tr><tr>
+		<td>Save</td>
 		<td>
-			<select id="keytype">
-				<option value="objects">objects</option>
-				<option value="items">items</option>
-				<option value="itemTypes">itemTypes</option>
+			<select id="element_save">
+				<option value="object">object</option>
+				<option value="sensorValue">Sensor values</option>
+				<option value="item">item</option>
 			</select>
 		</td>
-		<td><input id="keyval" type="number" min="0" max="9999"/></td>
+		<td colspan="2"></td>
 	</tr><tr>
-		<td class="label">JSON Param</td>
-		<td colspan="3"><input id="param" type="text" class="jsonparam" /></td>
+		<td></td>
+		<td colspan="3"><input id="jsonparam_save" type="text" class="jsonparam" /></td>
 	</tr><tr>
-		<td> </td>
-		<td id="actionner" class="bouton" colspan="2" >Actionner</td>
-		<td> </td>
+		<td></td>
+		<td id="save" class="bouton">Save</td>
+		<td id="save_reset" class="bouton">Reset</td>
+		<td></td>
 	</tr><tr>
-		<td id="result" class="blackbox log" colspan="4">
+		<td id="result_save" class="blackbox log" colspan="4">
+		<center><br>/<br><br></center>
+		</td>
+	</tr><tr>
+		<td colspan="4"><br><br></td>
+	</tr><tr>
+		<td>Delete (obj)</td>
+		<td>Id = <input id="objectid_del" type="number" min="0" max="9999"/></td>
+		<td colspan="2"></td>
+	</tr><tr>
+		<td></td>
+		<td id="delete" class="bouton">Delete</td>
+		<td id="del_reset" class="bouton">Reset</td>
+		<td></td>
+	</tr><tr>
+		<td id="result_del" class="blackbox log" colspan="4">
+		<center><br>/<br><br></center>
+		</td>
+	</tr><tr>
+		<td colspan="4"><br><br></td>
+	</tr><tr>
+		<td>Action</td>
+		<td colspan="3"><input id="jsonparam_act" type="text" class="jsonparam" /></td>
+	</tr><tr>
+		<td></td>
+		<td id="actor" class="bouton">Trigger actor</td>
+		<td id="act_reset" class="bouton">Reset</td>
+		<td></td>
+	</tr><tr>
+		<td id="result_act" class="blackbox log" colspan="4">
 		<center><br>/<br><br></center>
 		</td>
 </table>

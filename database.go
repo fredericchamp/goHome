@@ -8,13 +8,20 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/golang/glog"
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// -----------------------------------------------
+
 var dbFileName = ":memory:"
 
+// -----------------------------------------------
+
+// execSqlStmtsFromFile : read text file and execute each line as a bd stmt
+// ignore empty lines and lines starting with --
 func execSqlStmtsFromFile(db *sql.DB, fileName string) (err error) {
 	initFile, err := os.OpenFile(fileName, os.O_RDONLY, 0444)
 	if err != nil {
@@ -98,6 +105,8 @@ func openDB() (db *sql.DB, err error) {
 	}
 	return
 }
+
+// -----------------------------------------------
 
 // getGlobalParam : fetch param value from db table goHome
 // if id > 0 query db using this id (ignoring scope and name parameter) else query using scope and name
@@ -253,6 +262,9 @@ func getItemFields(db *sql.DB, idItem int, idObject int) (fields []ItemField, er
 	return
 }
 
+// -----------------------------------------------
+// -----------------------------------------------
+
 type ItemFieldVal struct {
 	IdObject int
 	IdField  int
@@ -290,6 +302,152 @@ func getItemFieldValues(db *sql.DB, idItem int, idObject int) (values []ItemFiel
 
 	for rows.Next() {
 		err = rows.Scan(&curVal.IdObject, &curVal.IdField, &curVal.IntVal, &curVal.FloatVal, &curVal.TextVal, &curVal.ByteVal)
+		if err != nil {
+			glog.Error(err)
+			return
+		}
+		values = append(values, curVal)
+	}
+	if err = rows.Err(); err != nil {
+		glog.Error(err)
+		return
+	}
+
+	return
+}
+
+// getLinkedObjIds : return Ids of all objects which idMasterObj is set to idOject
+func getLinkedObjIds(db *sql.DB, idObject int) (lstId []int, err error) {
+	if db == nil {
+		db, err = openDB()
+		if err != nil {
+			return
+		}
+		defer db.Close()
+	}
+
+	rows, err := db.Query("select v.idObject from ItemFieldVal v, ItemField f where v.idField = f.id and f.Name = 'idMasterObj' and v.intVal = ? order by v.idObject", idObject)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var idLinkedObject int
+		err = rows.Scan(&idLinkedObject)
+		if err != nil {
+			glog.Error(err)
+			return
+		}
+		lstId = append(lstId, idLinkedObject)
+	}
+	if err = rows.Err(); err != nil {
+		glog.Error(err)
+		return
+	}
+
+	return
+}
+
+// -----------------------------------------------
+// -----------------------------------------------
+
+type HistoSensor struct {
+	Ts       int
+	IdObject int
+	IntVal   int
+	FloatVal float32
+	TextVal  string
+}
+
+// getHistoSensor : read values from HistoSensor
+// if last the return the last available value (with greater timestamp)
+// else return all values between [startTS and endTS] (if endTS <= 2016/01/01 returns all values with ts >= startTS)
+func getHistoSensor(db *sql.DB, idObject int, last bool, startTS time.Time, endTS time.Time) (values []HistoSensor, err error) {
+	if db == nil {
+		db, err = openDB()
+		if err != nil {
+			return
+		}
+		defer db.Close()
+	}
+
+	var rows *sql.Rows
+
+	if last {
+		rows, err = db.Query("select h.ts, h.idObject, h.intVal, h.floatVal, h.textVal from HistoSensor h where h.idObject = ? group by h.idObject having h.ts = max(h.ts)", idObject)
+	} else {
+		if endTS.Before(time.Date(2016, time.January, 1, 0, 0, 0, 0, time.Local)) {
+			endTS = time.Now()
+		}
+		rows, err = db.Query("select h.ts, h.idObject, h.intVal, h.floatVal, h.textVal from HistoSensor h where h.idObject = ? and h.ts between ? and ? order by h.ts", idObject, startTS.Unix(), endTS.Unix())
+	}
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var curVal HistoSensor
+		err = rows.Scan(&curVal.Ts, &curVal.IdObject, &curVal.IntVal, &curVal.FloatVal, &curVal.TextVal)
+		if err != nil {
+			glog.Error(err)
+			return
+		}
+		values = append(values, curVal)
+	}
+	if err = rows.Err(); err != nil {
+		glog.Error(err)
+		return
+	}
+
+	return
+}
+
+// -----------------------------------------------
+// -----------------------------------------------
+
+type HistoActor struct {
+	Ts       int
+	IdObject int
+	IdUser   int
+	Param    string
+	Result   string
+}
+
+// getHistActor : read values from HistoActor
+// if last the return the last available value (with greater timestamp)
+// else return all values between [startTS and endTS] (if endTS <= 2016/01/01 returns all values with ts >= startTS)
+func getHistActor(db *sql.DB, idObject int, last bool, startTS time.Time, endTS time.Time) (values []HistoActor, err error) {
+	if db == nil {
+		db, err = openDB()
+		if err != nil {
+			return
+		}
+		defer db.Close()
+	}
+
+	var rows *sql.Rows
+
+	if last {
+		rows, err = db.Query("select h.ts, h.idObject, h.idUser, h.Param, h.Result from HistoActor h where h.idObject = ? group by h.idObject having h.ts = max(h.ts)", idObject)
+	} else {
+		if endTS.Before(time.Date(2016, time.January, 1, 0, 0, 0, 0, time.Local)) {
+			endTS = time.Now()
+		}
+		rows, err = db.Query("select h.ts, h.idObject, h.idUser, h.Param, h.Result from HistoActor h where h.idObject = ? and h.ts between ? and ? order by h.ts", idObject, startTS.Unix(), endTS.Unix())
+	}
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var curVal HistoActor
+		err = rows.Scan(&curVal.Ts, &curVal.IdObject, &curVal.IdUser, &curVal.Param, &curVal.Result)
 		if err != nil {
 			glog.Error(err)
 			return

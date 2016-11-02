@@ -22,7 +22,7 @@ func init() {
 // actorSetup : read defined actors from DB then create a ticker and start reading goroutine for each actor
 func actorSetup(db *sql.DB) (err error) {
 
-	actorObjs, err := getHomeObjectsForType(db, ItemActor)
+	actorObjs, err := getHomeObjects(db, -1, -1, ItemActor)
 	if err != nil {
 		return
 	}

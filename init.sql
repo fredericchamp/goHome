@@ -12,7 +12,7 @@ create table Item (id integer not null primary key, Name text, idProfil integer,
 create table ItemField (id integer, idItem integer, nOrder integer, Name text, idDataType, Helper text, Rules text );
 create table ItemFieldVal ( idObject integer, idField integer, intVal integer, floatVal float, textVal text, byteVal blob );
 create table HistoSensor (ts datetime, idObject integer, intVal integer, floatVal float, textVal text);
-create table HistoActor (ts datetime, idObject integer, Param text, Result text);
+create table HistoActor (ts datetime, idObject integer, idUser int, Param text, Result text);
 
 insert into goHome values    ( 0, 'goHome', 'InterfaceVersion', '1');
 insert into goHome values    ( 1, 'goHome', 'server_name', 'localhost');
@@ -118,7 +118,8 @@ insert into ItemFieldVal values ( 23, 21, 0, 0, '/dev/ttyAMA0', null );
 insert into ItemFieldVal values ( 23, 22, 1, 0, '', null );
 
 insert into Item values      ( 4, 'SensorAct', 1, 4, 2, null);
-insert into ItemField values (23, 4, 1, 'idSensor', 2, 'sensor list', '');
+-- linked Items (if idMasterItem > 0) MUST have a field 'idMasterObj'  : needed to handle the link at object level
+insert into ItemField values (23, 4, 1, 'idMasterObj', 2, 'sensor list', '');
 insert into ItemField values (24, 4, 2, 'idActor', 2, 'actor list', '');
 insert into ItemField values (25, 4, 3, 'Condition', 4, '', '');
 insert into ItemField values (26, 4, 4, 'ActorParam', 4, '', '');

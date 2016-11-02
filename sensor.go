@@ -3,7 +3,7 @@ package main
 
 import (
 	"database/sql"
-	"errors"
+	//	"errors"
 	"go/constant"
 	"go/token"
 	"go/types"
@@ -15,6 +15,19 @@ import (
 	"github.com/golang/glog"
 )
 
+// -----------------------------------------------
+
+/*
+const ( TODO : remove
+	DurationMS = "ms"
+	DurationS  = "s"
+	DurationM  = "m"
+	DurationH  = "h"
+)
+*/
+
+// -----------------------------------------------
+
 const (
 	TagSensorName = "@sensorName@"
 	TagPrevVal    = "@prevVal@"
@@ -22,8 +35,15 @@ const (
 	TagCondition  = "@condition@"
 )
 
+// -----------------------------------------------
+
 var sensorTickersLock sync.Mutex
 var sensorTickers = map[string]*time.Ticker{}
+
+var sensorPrevValLock sync.Mutex
+var sensorPrevVal = map[string]string{}
+
+// -----------------------------------------------
 
 func init() {
 	RegisterInternalFunc(SensorFunc, "CpuUsage", CpuUsage)
@@ -34,47 +54,20 @@ func init() {
 // sensorSetup : read defined sensors from DB then create a ticker and start reading goroutine for each sensor
 func sensorSetup(db *sql.DB) (err error) {
 
-	sensorObjs, err := getHomeObjectsForType(db, ItemSensor)
+	sensorObjs, err := getHomeObjects(db, 1, -1, ItemSensor)
 	if err != nil {
 		return
 	}
-	if glog.V(2) {
+	if glog.V(3) {
 		glog.Info("\nSensor Objs\n", sensorObjs)
-	}
-
-	sensorActObjs, err := getHomeObjectsForType(db, ItemSensorAct)
-	if err != nil {
-		return
-	}
-	if glog.V(2) {
-		glog.Info("\nSensorAct Objs\n", sensorActObjs)
-	}
-
-	// Link SensorAct to corresponding Sensor
-	for _, sensorAct := range sensorActObjs {
-		linkSensorId, err := sensorAct.getIntVal("idSensor")
-		if err != nil {
-			return err
-		}
-		for i, _ := range sensorObjs {
-			if sensorObjs[i].getId() == linkSensorId {
-				sensorObjs[i].linkedObjs = append(sensorObjs[i].linkedObjs, sensorAct)
-				if glog.V(2) {
-					glog.Infof("Add sensorAct %d to sensor %d", sensorAct.getId(), sensorObjs[i].getId())
-				}
-				break
-			}
-		}
 	}
 
 	sensorTickersLock.Lock()
 	defer sensorTickersLock.Unlock()
 
 	for _, sensor := range sensorObjs {
-		var duration time.Duration
-		var i int
 
-		if glog.V(2) {
+		if glog.V(3) {
 			glog.Info("Sensor Values", sensor.Values)
 		}
 		isActive, err := sensor.getIntVal("IsActive")
@@ -94,7 +87,9 @@ func sensorSetup(db *sql.DB) (err error) {
 		if err != nil {
 			return err
 		}
-
+		/* TODO : remove
+		var duration time.Duration
+		var i int
 		switch {
 		case strings.HasSuffix(durationStr, DurationMS):
 			i, err = strconv.Atoi(strings.TrimSuffix(durationStr, DurationMS))
@@ -108,19 +103,18 @@ func sensorSetup(db *sql.DB) (err error) {
 		case strings.HasSuffix(durationStr, DurationH):
 			i, err = strconv.Atoi(strings.TrimSuffix(durationStr, DurationH))
 			duration = time.Hour * time.Duration(i)
-		case strings.HasSuffix(durationStr, DurationD):
-			i, err = strconv.Atoi(strings.TrimSuffix(durationStr, DurationD))
-			duration = time.Hour * 24 * time.Duration(i)
 		default:
 			err = errors.New("Unknown duration format")
 		}
+		*/
+		duration, err := time.ParseDuration(durationStr)
 		if err != nil {
-			glog.Error("Falied to read duration (", durationStr, ") :", err)
+			glog.Errorf("Falied to parse duration (%s) : %s", durationStr, err)
 			return err
 		}
 
 		if glog.V(2) {
-			glog.Infof("Sensor %s / %s => New Ticker (%d)", sensorName, durationStr, duration)
+			glog.Infof("Sensor %s (#Act=%d) / %s => New Ticker (%d)", sensorName, len(sensor.linkedObjs), durationStr, duration)
 		}
 		sensorTickers[sensorName] = time.NewTicker(duration)
 
@@ -136,12 +130,10 @@ func sensorSetup(db *sql.DB) (err error) {
 
 // readSensor : perform sensor readings using ReadCmd according to initialised corresponding ticker
 func readSensor(sensor HomeObject) {
-	var prevVal string
 	sensorName, err := sensor.getStrVal("Name")
 	if err != nil {
 		return
 	}
-
 	readCmd, err := sensor.getStrVal("ReadCmd")
 	if err != nil {
 		return
@@ -151,11 +143,6 @@ func readSensor(sensor HomeObject) {
 		return
 	}
 	isInternal, err := sensor.getIntVal("IsInternal")
-	if err != nil {
-		return
-	}
-
-	record, err := sensor.getIntVal("Record")
 	if err != nil {
 		return
 	}
@@ -176,23 +163,7 @@ func readSensor(sensor HomeObject) {
 			continue
 		}
 
-		// prevVal init to result if not already set
-		if len(prevVal) <= 0 {
-			prevVal = result
-		}
-
-		if glog.V(2) {
-			glog.Infof("Sensor %s / Nb sensorAct = %d", sensorName, len(sensor.linkedObjs))
-		}
-		// Trigger linked sensorAct if any
-		for _, sensorAct := range sensor.linkedObjs {
-			go triggerSensorAct(sensorAct, sensorName, prevVal, result)
-		}
-		prevVal = result
-
-		if record != 0 {
-			go recordSensorValue(t, sensor, result)
-		}
+		handleSensorValue(t, sensor, result)
 	}
 }
 
@@ -206,6 +177,36 @@ func sensorCleanup() {
 	sensorTickersLock.Unlock()
 	if glog.V(1) {
 		glog.Info("sensorCleanup Done")
+	}
+}
+
+// handleSensorValue : trigger actor and store value in DB
+func handleSensorValue(t time.Time, sensor HomeObject, value string) {
+	sensorName, err := sensor.getStrVal("Name")
+	if err != nil {
+		return
+	}
+	record, err := sensor.getIntVal("Record")
+	if err != nil {
+		return
+	}
+
+	// Previous value
+	sensorPrevValLock.Lock()
+	prevVal, found := sensorPrevVal[sensorName]
+	if !found {
+		prevVal = value
+	}
+	sensorPrevVal[sensorName] = value
+	sensorPrevValLock.Unlock()
+
+	// Record value if required
+	if record != 0 {
+		go recordSensorValue(t, sensor, value)
+	}
+	// Trigger linked sensorAct if any
+	for _, sensorAct := range sensor.linkedObjs {
+		go triggerSensorAct(sensorAct, sensorName, prevVal, value)
 	}
 }
 
@@ -228,7 +229,7 @@ func recordSensorValue(t time.Time, sensor HomeObject, value string) {
 	case DBTypeBool, DBTypeInt, DBTypeDateTime:
 		intVal, err := strconv.Atoi(value)
 		if err != nil {
-			glog.Errorf("Fail to get int(%s) for sensor %d from : %s", value, sensorId, err)
+			glog.Errorf("Fail to get int(%s) for sensor %d : %s", value, sensorId, err)
 			return
 		}
 		_, err = db.Exec("insert into HistoSensor values ( ?, ?, ?, ?, ?);", t.Unix(), sensorId, intVal, 0, "")
@@ -237,7 +238,7 @@ func recordSensorValue(t time.Time, sensor HomeObject, value string) {
 	case DBTypeFloat:
 		floatVal, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			glog.Errorf("Fail to get float64(%s) for sensor %d from : %s", value, sensorId, err)
+			glog.Errorf("Fail to get float64(%s) for sensor %d : %s", value, sensorId, err)
 			return
 		}
 		_, err = db.Exec("insert into HistoSensor values ( ?, ?, ?, ?, ?);", t.Unix(), sensorId, 0, floatVal, "")
@@ -245,11 +246,11 @@ func recordSensorValue(t time.Time, sensor HomeObject, value string) {
 		glog.Errorf("Unknown data type %d for sensor %d", dataType, sensorId)
 	}
 	if err != nil {
-		glog.Errorf("Fail to store %d value (%s) for sensor %d from : %s ", dataType, value, sensorId, err)
+		glog.Errorf("Fail to store %d value (%s) for sensor %d : %s ", dataType, value, sensorId, err)
 	}
-	if glog.V(1) {
+	if glog.V(2) {
 		sensorName, _ := sensor.getStrVal("Name")
-		glog.Infof("recordSensorValue for %s at %d (%s)", sensorName, t.Unix(), value)
+		glog.Infof("recordSensorValue for %s (%s)", sensorName, value)
 	}
 }
 
