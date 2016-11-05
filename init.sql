@@ -7,12 +7,23 @@
 -- An empty line (or only white spaces)  is ignore
 -- Any other pattern wont work
 --
-create table goHome (id integer not null primary key, scope text, name text, value text);
-create table Item (id integer not null primary key, Name text, idProfil integer, idItemType integer, idMasterItem integer, icone blob);
-create table ItemField (id integer, idItem integer, nOrder integer, Name text, idDataType, Helper text, Rules text );
-create table ItemFieldVal ( idObject integer, idField integer, intVal integer, floatVal float, textVal text, byteVal blob );
-create table HistoSensor (ts datetime, idObject integer, intVal integer, floatVal float, textVal text);
-create table HistoActor (ts datetime, idObject integer, idUser int, Param text, Result text);
+create table goHome (idParam integer not null primary key, perimeter text, name text, value text);
+create unique index goHome_Uniq on goHome (perimeter, name);
+
+create table Item (idItem integer not null primary key, Name text, idProfil integer not null, idItemType integer not null, idMasterItem integer not null, icone blob);
+
+create table ItemField (idField integer not null primary key, idItem integer not null, nOrder integer not null, Name text, idDataType not null, Helper text, Rules text );
+create unique index ItemField_Uniq on ItemField (idItem, nOrder);
+
+create table ItemFieldVal ( idObject integer not null, idField integer not null, intVal integer not null, floatVal float not null, textVal text, byteVal blob );
+create unique index ItemFieldVal_PK on ItemFieldVal (idObject, idField);
+
+create table HistoSensor (ts datetime not null, idObject integer not null, intVal integer not null, floatVal float not null, textVal text);
+create unique index HistoSensor_PK on HistoSensor (ts, idObject);
+
+create table HistoActor (ts datetime not null, idObject integer not null, idUser int not null, Param text, Result text);
+create unique index HistoActor_PK on HistoActor (ts, idObject, idUser);
+
 
 insert into goHome values    ( 0, 'goHome', 'InterfaceVersion', '1');
 insert into goHome values    ( 1, 'goHome', 'server_name', 'localhost');

@@ -24,7 +24,9 @@
 				command:$.toJSON(cmde)
 			},
 			function(data, status){
-				$("#json_result").html(data);
+				var str = data.replace(/,{/g, ",<br>{");
+				str = str.replace(/],/g, "],<br>");
+				$("#json_result").html(str);
 			});
 		});
 		$("#json_reset").click(function(){
@@ -45,7 +47,8 @@
 				<option value="ReadItemTypes">ReadItemTypes</option>
 				<option value="ReadItems">ReadItems</option>
 				<option value="ReadObject">ReadObject</option>
-				<option value="ReadSensorVal">ReadSensorVal</option>
+				<option value="ReadSensor">ReadSensor</option>
+				<option value="ReadHistoVal">ReadHistoVal</option>
 				<option value="ReadActorRes">ReadActorRes</option>
 				<option value="SaveItems">SaveItems</option>
 				<option value="SaveObject">SaveObject</option>
@@ -63,7 +66,7 @@
 		<td class="label">objectid :</td><td><input id="objectid" type="number" min="0" max="9999" value="0" /></td>
 		<td class="label">endts :</td><td><input id="endts" type="number" min="0" max="9999" value="0" /></td>
 	</tr><tr>
-		<td class="label">jsonparam</td><td colspan="3"><input id="jsonparam" type="text" class="jsonparam" /></td>
+		<td class="label">jsonparam</td><td colspan="3"><textarea id="jsonparam" class="jsonparam"  rows="15" cols="80"></textarea></td>
 	</tr><tr>
 		<td></td>
 		<td id="json_go" class="bouton">GO</td>

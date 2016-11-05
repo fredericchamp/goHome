@@ -4,6 +4,7 @@ package main
 import (
 	"bufio"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -40,7 +41,7 @@ func execSqlStmtsFromFile(db *sql.DB, fileName string) (err error) {
 
 		_, err = db.Exec(sqlStmt)
 		if err != nil {
-			glog.Errorf("Error excuting sqlStmt (%s) : %s\n", sqlStmt, err)
+			glog.Errorf("File %s : Error excuting sqlStmt (%s) : %s\n", fileName, sqlStmt, err)
 			return
 		}
 	}
@@ -109,12 +110,11 @@ func openDB() (db *sql.DB, err error) {
 // -----------------------------------------------
 
 // getGlobalParam : fetch param value from db table goHome
-// if id > 0 query db using this id (ignoring scope and name parameter) else query using scope and name
+// if id > 0 query db using this id (ignoring perimeter and name parameter) else query using perimeter and name
 // If multiple rows received only the first is read
-func getGlobalParam(db *sql.DB, id int, scope string, name string) (value string, err error) {
+func getGlobalParam(db *sql.DB, idParam int, perimeter string, name string) (value string, err error) {
 	if db == nil {
-		db, err = openDB()
-		if err != nil {
+		if db, err = openDB(); err != nil {
 			return
 		}
 		defer db.Close()
@@ -122,13 +122,13 @@ func getGlobalParam(db *sql.DB, id int, scope string, name string) (value string
 
 	var rows *sql.Rows
 
-	if id > 0 {
-		rows, err = db.Query("select value from goHome where id = ?", id)
+	if idParam > 0 {
+		rows, err = db.Query("select value from goHome where idParam = ?", idParam)
 	} else {
-		rows, err = db.Query("select value from goHome where scope = ? and name = ?", scope, name)
+		rows, err = db.Query("select value from goHome where perimeter = ? and name = ?", perimeter, name)
 	}
 	if err != nil {
-		glog.Errorf("Failed to read global param (%d,%s,%s) : %s ", id, scope, name, err)
+		glog.Errorf("Failed to read global param (%d,%s,%s) : %s ", idParam, perimeter, name, err)
 		return
 	}
 	defer rows.Close()
@@ -136,12 +136,12 @@ func getGlobalParam(db *sql.DB, id int, scope string, name string) (value string
 	rows.Next()
 	err = rows.Scan(&value)
 	if err != nil {
-		glog.Errorf("Failed to read global param (%d,%s,%s) : %s ", id, scope, name, err)
+		glog.Errorf("Failed to read global param (%d,%s,%s) : %s ", idParam, perimeter, name, err)
 		return
 	}
 
 	if err = rows.Err(); err != nil {
-		glog.Errorf("Failed to read global param (%d,%s,%s) : %s ", id, scope, name, err)
+		glog.Errorf("Failed to read global param (%d,%s,%s) : %s ", idParam, perimeter, name, err)
 		return
 	}
 	return
@@ -151,7 +151,7 @@ func getGlobalParam(db *sql.DB, id int, scope string, name string) (value string
 // -----------------------------------------------
 
 type Item struct {
-	Id           int
+	IdItem       int
 	Name         string
 	IdProfil     int
 	IdItemType   int
@@ -164,8 +164,7 @@ type Item struct {
 // If idItem > 0 return Item with given Id else return all Items
 func getManageItems(db *sql.DB, idItemType itemType, idItem int) (items []Item, err error) {
 	if db == nil {
-		db, err = openDB()
-		if err != nil {
+		if db, err = openDB(); err != nil {
 			return
 		}
 		defer db.Close()
@@ -176,11 +175,11 @@ func getManageItems(db *sql.DB, idItemType itemType, idItem int) (items []Item, 
 
 	switch {
 	case idItem > 0:
-		rows, err = db.Query("select id, Name, idProfil, idItemType, idMasterItem, icone from Item where id = ? ", idItem)
+		rows, err = db.Query("select idItem, Name, idProfil, idItemType, idMasterItem, icone from Item where idItem = ? ", idItem)
 	case idItemType > 0:
-		rows, err = db.Query("select id, Name, idProfil, idItemType, idMasterItem, icone from Item where idItemType = ? ", idItemType)
+		rows, err = db.Query("select idItem, Name, idProfil, idItemType, idMasterItem, icone from Item where idItemType = ? ", idItemType)
 	default:
-		rows, err = db.Query("select id, Name, idProfil, idItemType, idMasterItem, icone from Item order by id")
+		rows, err = db.Query("select idItem, Name, idProfil, idItemType, idMasterItem, icone from Item order by idItem")
 	}
 	if err != nil {
 		glog.Error(err)
@@ -189,7 +188,7 @@ func getManageItems(db *sql.DB, idItemType itemType, idItem int) (items []Item, 
 	defer rows.Close()
 
 	for rows.Next() {
-		err = rows.Scan(&curItem.Id, &curItem.Name, &curItem.IdProfil, &curItem.IdItemType, &curItem.IdMasterItem, &curItem.Icone)
+		err = rows.Scan(&curItem.IdItem, &curItem.Name, &curItem.IdProfil, &curItem.IdItemType, &curItem.IdMasterItem, &curItem.Icone)
 		if err != nil {
 			glog.Error(err)
 			return
@@ -201,6 +200,11 @@ func getManageItems(db *sql.DB, idItemType itemType, idItem int) (items []Item, 
 		return
 	}
 
+	if len(items) <= 0 {
+		err = errors.New(fmt.Sprintf("Item not found (itemType=%d,item=%d)", idItemType, idItem))
+		return
+	}
+
 	return
 }
 
@@ -208,7 +212,7 @@ func getManageItems(db *sql.DB, idItemType itemType, idItem int) (items []Item, 
 // -----------------------------------------------
 
 type ItemField struct {
-	Id         int
+	IdField    int
 	IdItem     int
 	NOrder     int
 	Name       string
@@ -223,8 +227,7 @@ type ItemField struct {
 // Else return fields for all item
 func getItemFields(db *sql.DB, idItem int, idObject int) (fields []ItemField, err error) {
 	if db == nil {
-		db, err = openDB()
-		if err != nil {
+		if db, err = openDB(); err != nil {
 			return
 		}
 		defer db.Close()
@@ -234,12 +237,12 @@ func getItemFields(db *sql.DB, idItem int, idObject int) (fields []ItemField, er
 	var rows *sql.Rows
 
 	switch {
-	case idItem > 0:
-		rows, err = db.Query("select id, idItem, nOrder, Name, idDataType, Helper, Rules from ItemField where idItem = ? order by nOrder", idItem)
 	case idObject > 0:
-		rows, err = db.Query("select f.id, f.idItem, f.nOrder, f.Name, f.idDataType, f.Helper, f.Rules from ItemField f, ItemFieldVal v where f.id = v.idField and v.idObject = ? order by nOrder", idObject)
+		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Helper, f.Rules from ItemField f, ItemFieldVal v where f.idField = v.idField and v.idObject = ? order by nOrder", idObject)
+	case idItem > 0:
+		rows, err = db.Query("select idField, idItem, nOrder, Name, idDataType, Helper, Rules from ItemField where idItem = ? order by nOrder", idItem)
 	default:
-		rows, err = db.Query("select id, idItem, nOrder, Name, idDataType, Helper, Rules from ItemField order by idItem, nOrder")
+		rows, err = db.Query("select idField, idItem, nOrder, Name, idDataType, Helper, Rules from ItemField order by idItem, nOrder")
 	}
 	if err != nil {
 		glog.Error(err)
@@ -248,7 +251,7 @@ func getItemFields(db *sql.DB, idItem int, idObject int) (fields []ItemField, er
 	defer rows.Close()
 
 	for rows.Next() {
-		err = rows.Scan(&curField.Id, &curField.IdItem, &curField.NOrder, &curField.Name, &curField.IdDataType, &curField.Helper, &curField.Rules)
+		err = rows.Scan(&curField.IdField, &curField.IdItem, &curField.NOrder, &curField.Name, &curField.IdDataType, &curField.Helper, &curField.Rules)
 		if err != nil {
 			glog.Error(err)
 			return
@@ -259,6 +262,12 @@ func getItemFields(db *sql.DB, idItem int, idObject int) (fields []ItemField, er
 		glog.Error(err)
 		return
 	}
+
+	if len(fields) <= 0 {
+		err = errors.New(fmt.Sprintf("Item fields not found (item=%d,object=%d)", idItem, idObject))
+		return
+	}
+
 	return
 }
 
@@ -279,8 +288,7 @@ type ItemFieldVal struct {
 // Else return all values for all objects with idField is part of idItem description
 func getItemFieldValues(db *sql.DB, idItem int, idObject int) (values []ItemFieldVal, err error) {
 	if db == nil {
-		db, err = openDB()
-		if err != nil {
+		if db, err = openDB(); err != nil {
 			return
 		}
 		defer db.Close()
@@ -289,10 +297,13 @@ func getItemFieldValues(db *sql.DB, idItem int, idObject int) (values []ItemFiel
 	var curVal ItemFieldVal
 	var rows *sql.Rows
 
-	if idObject > 0 {
-		rows, err = db.Query("select v.idObject, v.idField, v.intVal, v.floatVal, v.textVal, v.byteVal from ItemFieldVal v, ItemField f where v.idField = f.id and v.idObject = ? order by v.idObject, f.NOrder", idObject)
-	} else {
-		rows, err = db.Query("select v.idObject, v.idField, v.intVal, v.floatVal, v.textVal, v.byteVal from ItemFieldVal v, ItemField f where v.idField = f.id and f.idItem = ? order by v.idObject, f.NOrder", idItem)
+	switch {
+	case idObject > 0:
+		rows, err = db.Query("select v.idObject, v.idField, v.intVal, v.floatVal, v.textVal, v.byteVal from ItemFieldVal v, ItemField f where v.idField = f.idField and v.idObject = ? order by v.idObject, f.NOrder", idObject)
+	case idItem > 0:
+		rows, err = db.Query("select v.idObject, v.idField, v.intVal, v.floatVal, v.textVal, v.byteVal from ItemFieldVal v, ItemField f where v.idField = f.idField and f.idItem = ? order by v.idObject, f.NOrder", idItem)
+	default:
+		err = errors.New(fmt.Sprintf("getItemFieldValues (idItem=%d idObject=%d) ... wont read all ItemFieldVal from db", idItem, idObject))
 	}
 	if err != nil {
 		glog.Error(err)
@@ -319,14 +330,13 @@ func getItemFieldValues(db *sql.DB, idItem int, idObject int) (values []ItemFiel
 // getLinkedObjIds : return Ids of all objects which idMasterObj is set to idOject
 func getLinkedObjIds(db *sql.DB, idObject int) (lstId []int, err error) {
 	if db == nil {
-		db, err = openDB()
-		if err != nil {
+		if db, err = openDB(); err != nil {
 			return
 		}
 		defer db.Close()
 	}
 
-	rows, err := db.Query("select v.idObject from ItemFieldVal v, ItemField f where v.idField = f.id and f.Name = 'idMasterObj' and v.intVal = ? order by v.idObject", idObject)
+	rows, err := db.Query("select v.idObject from ItemFieldVal v, ItemField f where v.idField = f.idField and f.Name = 'idMasterObj' and v.intVal = ? order by v.idObject", idObject)
 	if err != nil {
 		glog.Error(err)
 		return
@@ -354,7 +364,7 @@ func getLinkedObjIds(db *sql.DB, idObject int) (lstId []int, err error) {
 // -----------------------------------------------
 
 type HistoSensor struct {
-	Ts       int
+	Ts       time.Time
 	IdObject int
 	IntVal   int
 	FloatVal float32
@@ -366,8 +376,7 @@ type HistoSensor struct {
 // else return all values between [startTS and endTS] (if endTS <= 2016/01/01 returns all values with ts >= startTS)
 func getHistoSensor(db *sql.DB, idObject int, last bool, startTS time.Time, endTS time.Time) (values []HistoSensor, err error) {
 	if db == nil {
-		db, err = openDB()
-		if err != nil {
+		if db, err = openDB(); err != nil {
 			return
 		}
 		defer db.Close()
@@ -410,7 +419,7 @@ func getHistoSensor(db *sql.DB, idObject int, last bool, startTS time.Time, endT
 // -----------------------------------------------
 
 type HistoActor struct {
-	Ts       int
+	Ts       time.Time
 	IdObject int
 	IdUser   int
 	Param    string
@@ -422,8 +431,7 @@ type HistoActor struct {
 // else return all values between [startTS and endTS] (if endTS <= 2016/01/01 returns all values with ts >= startTS)
 func getHistActor(db *sql.DB, idObject int, last bool, startTS time.Time, endTS time.Time) (values []HistoActor, err error) {
 	if db == nil {
-		db, err = openDB()
-		if err != nil {
+		if db, err = openDB(); err != nil {
 			return
 		}
 		defer db.Close()
@@ -458,6 +466,74 @@ func getHistActor(db *sql.DB, idObject int, last bool, startTS time.Time, endTS 
 		glog.Error(err)
 		return
 	}
+
+	return
+}
+
+// writeItemFieldValues : write all values to DB
+// All values in the [] must belong to the same object
+// values[0].IdObject is used as objectid for all records
+// if values[0].IdObject <= 0 the next available objectid is reserved and use as objectid for all records
+func writeItemFieldValues(db *sql.DB, values []ItemFieldVal) (objectid int, err error) {
+	if db == nil {
+		if db, err = openDB(); err != nil {
+			return
+		}
+		defer db.Close()
+	}
+
+	if len(values) <= 0 {
+		err = errors.New("Nothing to write values[] is empty")
+		return
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		err = errors.New(fmt.Sprintf("Fail to write values, db.Begin : %s", err))
+		return
+	}
+	objectid = values[0].IdObject
+
+	if objectid <= 0 {
+		// New Id needed
+		row := tx.QueryRow("select max(idObject)+1 from ItemFieldVal")
+		if row == nil {
+			glog.Error("Fail to select next objectid")
+			tx.Rollback()
+			return
+		}
+		if err = row.Scan(&objectid); err != nil {
+			glog.Errorf("Fail to scan next objectid : %s", err)
+			tx.Rollback()
+			return
+		}
+	} else {
+		// Delete existing ItemFieldVal
+		_, err = db.Exec(fmt.Sprintf("delete from ItemFieldVal where idObject = %d", objectid))
+		if err != nil {
+			glog.Errorf("Fail to delete ItemFieldVal for objectid=%d : %s", objectid, err)
+			tx.Rollback()
+			return
+		}
+	}
+
+	stmt, err := tx.Prepare("insert into ItemFieldVal (idObject, idField, intVal, floatVal, textVal, byteVal) values(?, ?, ?, ?, ?, ?)")
+	if err != nil {
+		glog.Errorf("Fail to prepare insert into ItemFieldVal : %s", err)
+		tx.Rollback()
+		return
+	}
+	defer stmt.Close()
+
+	for _, val := range values {
+		_, err = stmt.Exec(objectid, val.IdField, val.IntVal, val.FloatVal, val.TextVal, val.ByteVal)
+		if err != nil {
+			glog.Errorf("Fail to exec insert into ItemFieldVal (objId=%d, %v) : %s", objectid, val, err)
+			tx.Rollback()
+			return
+		}
+	}
+	tx.Commit()
 
 	return
 }

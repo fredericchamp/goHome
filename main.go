@@ -99,8 +99,7 @@ func main() {
 	chanExit := make(chan bool)
 	go signalSetup(chanExit)
 
-	err := initDBFile(*dbfile)
-	if err != nil {
+	if err := initDBFile(*dbfile); err != nil {
 		glog.Error("Could not init DB ... exiting")
 		return
 	}
@@ -113,15 +112,13 @@ func main() {
 
 	go startHTTPS(chanExit)
 
-	err = sensorSetup(db)
-	if err != nil {
+	if err = sensorSetup(db); err != nil {
 		glog.Errorf("sensorSetup failed : %s ... exiting", err)
 		return
 	}
 	defer sensorCleanup()
 
-	err = actorSetup(db)
-	if err != nil {
+	if err = actorSetup(db); err != nil {
 		glog.Errorf("actorSetup failed : %s ... exiting", err)
 		return
 	}

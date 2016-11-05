@@ -11,40 +11,9 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"time"
 
 	"github.com/golang/glog"
 )
-
-// -----------------------------------------------
-
-// Accepted Format = {"command":"api...", "itemtypeid":id, "itemid":id, "objectid":id, "startts":ts, "endts":ts, "jsonparam":{...}}
-
-type apiCommand string
-
-const (
-	apiReadItemType  apiCommand = "ReadItemTypes"
-	apiReadItem                 = "ReadItems"
-	apiReadObject               = "ReadObject"
-	apiReadSensorVal            = "ReadSensorVal"
-	apiReadActorRes             = "ReadActorRes"
-	apiSaveItem                 = "SaveItems"
-	apiSaveObject               = "SaveObject"
-	apiDeleteItem               = "DeleteItems"
-	apiDeleteObject             = "DeleteObject"
-	apiSendSensorVal            = "SendSensorVal"
-	apiTriggerActor             = "TriggerActor"
-)
-
-type apiCommandSruct struct {
-	Command    apiCommand
-	Itemtypeid itemType
-	Itemid     int
-	Objectid   int
-	Startts    int64
-	Endts      int64
-	Jsonparam  string
-}
 
 // -----------------------------------------------
 
@@ -71,6 +40,11 @@ func getFormIntVal(form url.Values, key string, idx int) (intVal int, err error)
 	return
 }
 
+func writeApiError(w http.ResponseWriter, errMsg string) {
+	w.Write(apiError(errMsg))
+	return
+}
+
 // -----------------------------------------------
 
 // defaultResponse : when a request is not properly form or handle ... was useful during dev
@@ -92,7 +66,7 @@ func getFormIntVal(form url.Values, key string, idx int) (intVal int, err error)
 //</html>
 //`
 //	if err != nil {
-//		fmt.Fprint(w, err.Error())
+//		writeJsonError(w, err.Error())
 //		return
 //	}
 //	fmt.Fprintf(w, header)
@@ -115,19 +89,18 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 
 	userObj, err := getUserFromCert(r.TLS.PeerCertificates)
 	if err != nil {
-		fmt.Fprintf(w, `{"error":"%s"}`, err)
+		writeApiError(w, err.Error())
 		return
 	}
 
 	profil, err := checkApiUser(userObj)
 	if err != nil {
-		fmt.Fprintf(w, `{"error":"%s"}`, err)
+		writeApiError(w, err.Error())
 		return
 	}
 
-	err = r.ParseForm()
-	if err != nil {
-		fmt.Fprintf(w, `{"error":"Form parse error '%s' for (%s)"}`, err, r.Form)
+	if err = r.ParseForm(); err != nil {
+		writeApiError(w, fmt.Sprintf("Form parse error '%s' for (%s)", err, r.Form))
 		return
 	}
 	if glog.V(2) {
@@ -136,14 +109,14 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 
 	command, err := getFormStrVal(r.Form, "command", 0)
 	if err != nil {
-		fmt.Fprintf(w, `{"error":"%s"}`, err)
+		writeApiError(w, err.Error())
 		return
 	}
 
 	var jsonCmde apiCommandSruct
 	err = json.Unmarshal([]byte(command), &jsonCmde)
 	if err != nil {
-		glog.Errorf("Fail to unmarshal apiCommandSruct (%s) : %s", command, err)
+		writeApiError(w, fmt.Sprintf("Fail to unmarshal apiCommandSruct (%s) : %s", command, err))
 		return
 	}
 
@@ -164,101 +137,148 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		if glog.V(1) {
 			glog.Infof("%s (type=%d, item=%d)", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid)
 		}
+		/*
+			items, err := getManageItems(nil, jsonCmde.Itemtypeid, jsonCmde.Itemid)
+			if err != nil {
+				writeJsonError(w, fmt.Sprintf("%s failed for (type=%d, item=%d) : %s", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, err))
+				return
+			}
 
-		items, err := getManageItems(nil, jsonCmde.Itemtypeid, jsonCmde.Itemid)
-		if err != nil {
-			fmt.Fprintf(w, `{"error":"%s failed for (%s) : %s"}`, jsonCmde.Command, r.Form, err)
-			return
-		}
-
-		jsonEncoded, err := json.Marshal(profilFilteredItems(profil, items))
-		if err != nil {
-			fmt.Fprintf(w, `{"error":"%s failed for (%s) : %s"}`, jsonCmde.Command, r.Form, err)
-			return
-		}
-		w.Write(jsonEncoded)
+			jsonEncoded, err := json.Marshal(profilFilteredItems(profil, items))
+			if err != nil {
+				writeJsonError(w, fmt.Sprintf("%s failed for (type=%d, item=%d) : %s", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, err))
+				return
+			}
+			w.Write(jsonEncoded)
+		*/
+		w.Write(fctApiReadItem(profil, jsonCmde))
 		return
 
 	case apiReadObject:
 		if glog.V(1) {
 			glog.Infof("%s (type=%d, item=%d, obj=%d)", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid)
 		}
+		/*
+			objs, err := getHomeObjects(nil, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid)
+			if err != nil {
+				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
+				return
+			}
 
-		objs, err := getHomeObjects(nil, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid)
-		if err != nil {
-			fmt.Fprintf(w, `{"error":"%s failed for (%s) : %s"}`, jsonCmde.Command, r.Form, err)
-			return
-		}
+			jsonEncoded, err := json.Marshal(profilFilteredObjects(profil, objs))
+			if err != nil {
+				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
+				return
+			}
 
-		jsonEncoded, err := json.Marshal(profilFilteredObjects(profil, objs))
-		if err != nil {
-			fmt.Fprintf(w, `{"error":"%s failed for (%s) : %s"}`, jsonCmde.Command, r.Form, err)
-			return
-		}
-
-		w.Write(jsonEncoded)
+			w.Write(jsonEncoded)
+		*/
+		w.Write(fctApiReadObject(profil, jsonCmde))
 		return
 
-	case apiReadSensorVal:
+	case apiReadSensor:
 		if glog.V(1) {
-			glog.Infof("%s (%d, %d, %d)", jsonCmde.Command, jsonCmde.Objectid, jsonCmde.Startts, jsonCmde.Endts)
+			glog.Infof("%s (objectid=%d)", jsonCmde.Command, jsonCmde.Objectid)
 		}
+		/*
+			objs, err := getHomeObjects(nil, ItemNone, -1, jsonCmde.Objectid)
+			if err != nil {
+				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
+				return
+			}
+			if len(objs) <= 0 {
+				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : object not found", jsonCmde.Command, r.Form))
+				return
+			}
+			sensor := objs[0]
 
-		last := false
-		if (jsonCmde.Startts <= 0 && jsonCmde.Endts <= 0) || jsonCmde.Startts > time.Now().Unix() {
-			last = true
+			err = checkAccessToObject(profil, sensor)
+			if err != nil {
+				writeJsonError(w, err.Error())
+				return
+			}
+
+			value, err := readSensoValue(sensor)
+			if err != nil {
+				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
+				return
+			}
+
+			jsonEncoded, err := json.Marshal(value)
+			if err != nil {
+				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
+				return
+			}
+
+			w.Write(jsonEncoded)
+		*/
+		w.Write(fctApiReadSensor(profil, jsonCmde))
+		return
+
+	case apiReadHistoVal:
+		if glog.V(1) {
+			glog.Infof("%s (obj=%d, start=%d, end=%d)", jsonCmde.Command, jsonCmde.Objectid, jsonCmde.Startts, jsonCmde.Endts)
 		}
+		/*
+			last := false
+			if (jsonCmde.Startts <= 0 && jsonCmde.Endts <= 0) || jsonCmde.Startts > time.Now().Unix() {
+				last = true
+			}
 
-		err = checkAccessToObjectId(profil, jsonCmde.Objectid)
-		if err != nil {
-			fmt.Fprintf(w, `{"error":"%s"}`, err)
-			return
-		}
+			err = checkAccessToObjectId(profil, jsonCmde.Objectid)
+			if err != nil {
+				writeJsonError(w, err.Error())
+				return
+			}
 
-		sVals, err := getHistoSensor(nil, jsonCmde.Objectid, last, time.Unix(jsonCmde.Startts, 0), time.Unix(jsonCmde.Endts, 0))
-		if err != nil {
-			fmt.Fprintf(w, `{"error":"%s failed for (%s) : %s"}`, jsonCmde.Command, r.Form, err)
-			return
-		}
+			sVals, err := getHistoSensor(nil, jsonCmde.Objectid, last, time.Unix(jsonCmde.Startts, 0), time.Unix(jsonCmde.Endts, 0))
+			if err != nil {
+				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
+				return
+			}
 
-		jsonEncoded, err := json.Marshal(sVals)
-		if err != nil {
-			fmt.Fprintf(w, `{"error":"%s failed for (%s) : %s"}`, jsonCmde.Command, r.Form, err)
-			return
-		}
+			jsonEncoded, err := json.Marshal(sVals)
+			if err != nil {
+				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
+				return
+			}
 
-		w.Write(jsonEncoded)
+			w.Write(jsonEncoded)
+		*/
+		w.Write(fctApiReadHistoVal(profil, jsonCmde))
 		return
 
 	case apiReadActorRes:
 		if glog.V(1) {
-			glog.Infof("%s (%d, %d, %d)", jsonCmde.Command, jsonCmde.Objectid, jsonCmde.Startts, jsonCmde.Endts)
+			glog.Infof("%s (objectid=%d, start=%d, end=%d)", jsonCmde.Command, jsonCmde.Objectid, jsonCmde.Startts, jsonCmde.Endts)
 		}
+		/*
+			last := false
+			if (jsonCmde.Startts <= 0 && jsonCmde.Endts <= 0) || jsonCmde.Startts > time.Now().Unix() {
+				last = true
+			}
 
-		last := false
-		if (jsonCmde.Startts <= 0 && jsonCmde.Endts <= 0) || jsonCmde.Startts > time.Now().Unix() {
-			last = true
-		}
+			err = checkAccessToObjectId(profil, jsonCmde.Objectid)
+			if err != nil {
+				writeJsonError(w, err.Error())
+				return
+			}
 
-		err = checkAccessToObjectId(profil, jsonCmde.Objectid)
-		if err != nil {
-			fmt.Fprintf(w, `{"error":"%s"}`, err)
-			return
-		}
+			aVals, err := getHistActor(nil, jsonCmde.Objectid, last, time.Unix(jsonCmde.Startts, 0), time.Unix(jsonCmde.Endts, 0))
+			if err != nil {
+				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
+				return
+			}
 
-		aVals, err := getHistActor(nil, jsonCmde.Objectid, last, time.Unix(jsonCmde.Startts, 0), time.Unix(jsonCmde.Endts, 0))
-		if err != nil {
-			fmt.Fprintf(w, `{"error":"%s failed for (%s) : %s"}`, jsonCmde.Command, r.Form, err)
-			return
-		}
+			jsonEncoded, err := json.Marshal(aVals)
+			if err != nil {
+				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
+				return
+			}
 
-		jsonEncoded, err := json.Marshal(aVals)
-		if err != nil {
-			fmt.Fprintf(w, `{"error":"%s failed for (%s) : %s"}`, jsonCmde.Command, r.Form, err)
-			return
-		}
-
-		w.Write(jsonEncoded)
+			w.Write(jsonEncoded)
+		*/
+		w.Write(fctApiReadActorRes(profil, jsonCmde))
 		return
 
 	case apiSaveItem: // TODO
@@ -266,42 +286,116 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		// check item content
 		// check profil rights on item
 		// save item to DB (update or insert)
-		fmt.Fprintf(w, `{"error":"Command %s not ready"}`, jsonCmde.Command)
+		writeApiError(w, fmt.Sprintf("Command %s not ready", jsonCmde.Command))
 		return
 
-	case apiSaveObject: // TODO
-		// Unmarchal jsonparam to []ItemFieldVal
-		// Identify corresponding item
-		// check profil rights on item
-		// Build HomeObject and check []ItemFieldVal regarding item description
-		// If id is provided :
-		//		check itemId in DB match itemId deduce from jsonparam content
-		//		check profil rights on existing object values
-		//		check profil rights on new object values
-		//		update db
-		// Else
-		//		check profil rights on new object
-		//		insert into DB with new Id allocation
-		fmt.Fprintf(w, `{"error":"Command %s not ready"}`, jsonCmde.Command)
+	case apiSaveObject:
+		if glog.V(1) {
+			glog.Infof("%s (type=%d, item=%d, obj=%d)", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid)
+		}
+		/*
+			var objIn HomeObject
+			if err = json.Unmarshal([]byte(jsonCmde.Jsonparam), &objIn); err != nil {
+				writeJsonError(w, fmt.Sprintf("%s fail to unmarshal jsonparam (%s) : %s", jsonCmde.Command, jsonCmde.Jsonparam, err))
+				return
+			}
+
+			// load object from db
+			objs, err := getHomeObjects(nil, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid)
+			if err != nil {
+				writeJsonError(w, fmt.Sprintf("%s fail to load matching object (%s) : %s", jsonCmde.Command, jsonCmde.Objectid, err))
+				return
+			}
+			if len(objs) != 1 {
+				writeJsonError(w, fmt.Sprintf("%s should have only 1 matching object, not %d", jsonCmde.Command, len(objs)))
+				return
+			}
+			objDb := objs[0]
+
+			// check profil access rights on item
+			if err = checkAccessToObjectId(profil, objDb.Fields[0].IdItem); err != nil {
+				writeJsonError(w, err.Error())
+				return
+			}
+
+			// Check objIn fieldsand objDb fields are the same
+			if !reflect.DeepEqual(objIn.Fields, objDb.Fields) {
+				writeJsonError(w, fmt.Sprintf("%s received []Fields does not match []Fields in DB for itemid=%d", jsonCmde.Command, jsonCmde.Itemid))
+				return
+			}
+
+			if err = objIn.ValidateValues(objIn.Values); err != nil {
+				writeJsonError(w, fmt.Sprintf("%s : %s", jsonCmde.Command, err.Error()))
+				return
+			}
+
+			if jsonCmde.Objectid > 0 {
+				// check profil access rights on existing object
+				if err = checkAccessToObject(profil, objDb); err != nil {
+					writeJsonError(w, err.Error())
+					return
+				}
+			}
+
+			// check profil access rights on new object
+			if err = checkAccessToObject(profil, objIn); err != nil {
+				writeJsonError(w, err.Error())
+				return
+			}
+
+			// write object to DB
+			if jsonCmde.Objectid, err = writeObject(objIn); err != nil {
+				writeJsonError(w, err.Error())
+				return
+			}
+
+			// Code copy from apiReadObject [-----------------------------
+			objs, err = getHomeObjects(nil, ItemNone, -1, jsonCmde.Objectid)
+			if err != nil {
+				writeJsonError(w, fmt.Sprintf("%s failed for (objectid=%d) : %s", jsonCmde.Command, jsonCmde.Objectid, err))
+				return
+			}
+
+			jsonEncoded, err := json.Marshal(profilFilteredObjects(profil, objs))
+			if err != nil {
+				writeJsonError(w, fmt.Sprintf("%s json.Marshal failed for (%s) : %s", jsonCmde.Command, jsonCmde.Objectid, err))
+				return
+			}
+
+			w.Write(jsonEncoded)
+			// ----------------------------------------------------------]
+
+		*/
+		w.Write(fctApiSaveObject(profil, jsonCmde))
 		return
 
 	case apiDeleteItem, apiDeleteObject:
-		fmt.Fprint(w, `{"error":"Delete not available : use apiSave* to toggle IsActive flag or use manual access to DB"}`)
+		writeApiError(w, "Delete not available : use apiSave* to toggle IsActive flag or use manual access to DB")
 		return
 
 	case apiSendSensorVal: // TODO
+		//		if glog.V(1) {
+		//			glog.Infof("%s (type=%d, item=%d, obj=%d)", jsonCmde.Command, jsonCmde.Objectid, jsonCmde.Value)
+		//		}
+
+		//		objs, err := getHomeObjects(nil, ItemNone, -1, jsonCmde.Objectid)
+		//		if err != nil {
+		//			writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
+		//			return
+		//		}
+
 		// Unmarchal jsonparam to SensorVal
 		// load sensor using getHomeObjects
 		// Call handleSensorValue(ts, sensor, value)
-		fmt.Fprintf(w, `{"error":"Command %s not ready"}`, jsonCmde.Command)
+		writeApiError(w, fmt.Sprintf("Command %s not ready", jsonCmde.Command))
 		return
 
 	case apiTriggerActor: // TODO
-		fmt.Fprintf(w, `{"error":"Command %s not ready"}`, jsonCmde.Command)
+		writeApiError(w, fmt.Sprintf("Command %s not ready", jsonCmde.Command))
 		return
 
 	default:
-		fmt.Fprintf(w, `{"error":"Unhandle command '%s' in (%s)"}`, jsonCmde.Command, r.Form)
+		writeApiError(w, fmt.Sprintf("Unhandle command '%s' in (%s)", jsonCmde.Command, r.Form))
 		return
 	}
 
@@ -424,8 +518,7 @@ func startHTTPS(chanExit chan bool) {
 		glog.Infof("Starting ListenAndServeTLS (https://%s:%d)", serverName, port)
 	}
 
-	err = server.ListenAndServeTLS(serverCrtFileName, serverKeyFileName)
-	if err != nil {
+	if err = server.ListenAndServeTLS(serverCrtFileName, serverKeyFileName); err != nil {
 		glog.Errorf("Error starting HTTPS ListenAndServeTLS : %s ... exiting", err)
 		chanExit <- true
 	}

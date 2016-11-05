@@ -218,7 +218,10 @@ func GetPoloBalance(param1 string, param2 string) (result string, err error) {
 	var objmap map[string]*json.RawMessage
 	err = json.Unmarshal(data, &objmap)
 	if err != nil {
-		glog.Errorf("Fail to unmarshal Body : %s", err)
+		if len(data) > 50 {
+			data = data[:20]
+		}
+		glog.Errorf("Fail to unmarshal Body '%s' : %s", string(data), err)
 		return
 	}
 

@@ -126,7 +126,6 @@ func actorCleanup() {
 }
 
 // recordActorResult : store in DB param and result for an actor
-// TODO : allow to store value outsite of main DB ?
 func recordActorResult(actor HomeObject, param string, result string) {
 	db, err := openDB()
 	if err != nil {
@@ -149,13 +148,11 @@ func recordActorResult(actor HomeObject, param string, result string) {
 // -----------------------------------------------
 
 func ActorGPIO(param1 string, param2 string) (string, error) {
-	// TODO ActorGPIO
-	glog.Info("GPIO Not Implemented")
+	glog.Info("GPIO Not Implemented") // TODO
 	return time.Now().String(), nil
 }
 
 func SerialATSMS(param1 string, param2 string) (string, error) {
-	// TODO SerialATSMS
-	glog.Info("SerialATSMS Not Implemented")
+	glog.Info("SerialATSMS Not Implemented") // TODO
 	return time.Now().String(), nil
 }

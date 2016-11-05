@@ -98,45 +98,6 @@ func sensorSetup(db *sql.DB) (err error) {
 	return
 }
 
-// readSensor : perform sensor readings using ReadCmd according to initialised corresponding ticker
-func readSensor(sensor HomeObject) {
-	sensorName, err := sensor.getStrVal("Name")
-	if err != nil {
-		return
-	}
-	readCmd, err := sensor.getStrVal("ReadCmd")
-	if err != nil {
-		return
-	}
-	readParam, err := sensor.getStrVal("ReadParam")
-	if err != nil {
-		return
-	}
-	isInternal, err := sensor.getIntVal("IsInternal")
-	if err != nil {
-		return
-	}
-
-	sensorTickersLock.Lock()
-	localTicker := sensorTickers[sensorName]
-	sensorTickersLock.Unlock()
-
-	for t := range localTicker.C {
-		var result string
-		var err error
-		if isInternal != 0 {
-			result, err = CallInternalFunc(SensorFunc, readCmd, readParam, "")
-		} else {
-			result, err = LaunchExternalCmd(SensorFunc, readCmd, readParam, "")
-		}
-		if err != nil {
-			continue
-		}
-
-		handleSensorValue(t, sensor, result)
-	}
-}
-
 // sensorCleanup : stop and remove all sensor ticker
 func sensorCleanup() {
 	sensorTickersLock.Lock()
@@ -150,7 +111,51 @@ func sensorCleanup() {
 	}
 }
 
-// handleSensorValue : trigger actor and store value in DB
+// readSensor : perform sensor readings
+func readSensoValue(sensor HomeObject) (result string, err error) {
+	readCmd, err := sensor.getStrVal("ReadCmd")
+	if err != nil {
+		return
+	}
+	readParam, err := sensor.getStrVal("ReadParam")
+	if err != nil {
+		return
+	}
+	isInternal, err := sensor.getIntVal("IsInternal")
+	if err != nil {
+		return
+	}
+
+	if isInternal != 0 {
+		return CallInternalFunc(SensorFunc, readCmd, readParam, "")
+	}
+
+	return LaunchExternalCmd(SensorFunc, readCmd, readParam, "")
+
+}
+
+// readSensor : call readSensoValue according to initialised corresponding ticker and handleSensorValue
+func readSensor(sensor HomeObject) {
+	sensorName, err := sensor.getStrVal("Name")
+	if err != nil {
+		return
+	}
+
+	sensorTickersLock.Lock()
+	localTicker := sensorTickers[sensorName]
+	sensorTickersLock.Unlock()
+
+	for t := range localTicker.C {
+		result, err := readSensoValue(sensor)
+		if err != nil {
+			continue
+		}
+
+		handleSensorValue(t, sensor, result)
+	}
+}
+
+// handleSensorValue : trigger actor and store sensor value in DB
 func handleSensorValue(t time.Time, sensor HomeObject, value string) {
 	sensorName, err := sensor.getStrVal("Name")
 	if err != nil {
@@ -165,13 +170,13 @@ func handleSensorValue(t time.Time, sensor HomeObject, value string) {
 	sensorPrevValLock.Lock()
 	prevVal, found := sensorPrevVal[sensorName]
 	if !found {
-		prevVal = value
+		prevVal = value // todo get prev val from db ?
 	}
 	sensorPrevVal[sensorName] = value
 	sensorPrevValLock.Unlock()
 
 	// Record value if required
-	if record != 0 {
+	if record != 0 { // todo : add more options : 0=never, 1=always, 2=only if change, ...
 		go recordSensorValue(t, sensor, value)
 	}
 	// Trigger linked sensorAct if any
@@ -181,7 +186,6 @@ func handleSensorValue(t time.Time, sensor HomeObject, value string) {
 }
 
 // recordSensorValue : store in DB a value for a given sensor reading
-// TODO : allow to store value outsite of main DB
 func recordSensorValue(t time.Time, sensor HomeObject, value string) {
 	db, err := openDB()
 	if err != nil {
@@ -280,19 +284,16 @@ func triggerSensorAct(sensorAct HomeObject, sensorName string, prevVal string, l
 // -----------------------------------------------
 
 func CpuUsage(param1 string, param2 string) (string, error) {
-	// TODO CpuUsage
-	glog.V(2).Info("CpuUsage Not Implemented")
+	glog.V(2).Info("CpuUsage Not Implemented") // TODO
 	return "99", nil
 }
 
 func MemoryUsage(param1 string, param2 string) (string, error) {
-	// TODO MemoryUsage
-	glog.V(2).Info("MemoryUsage Not Implemented")
+	glog.V(2).Info("MemoryUsage Not Implemented") // TODO
 	return "99", nil
 }
 
 func SensorGPIO(param1 string, param2 string) (string, error) {
-	// TODO SensorGPIO
-	glog.V(2).Info("GPIO Not Implemented")
+	glog.V(2).Info("GPIO Not Implemented") // TODO
 	return "1", nil
 }

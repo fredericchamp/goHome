@@ -1,4 +1,4 @@
-// ser.go
+// user.go
 package main
 
 import (
@@ -60,8 +60,7 @@ func getEmailFromCert(peerCrt []*x509.Certificate) (email string, err error) {
 // If force == false then only load if userList is empty
 func loadUsers(db *sql.DB, force bool) (nbUser int, err error) {
 	if db == nil {
-		db, err = openDB()
-		if err != nil {
+		if db, err = openDB(); err != nil {
 			return
 		}
 		defer db.Close()
@@ -144,6 +143,7 @@ func getUserFromCert(peerCrt []*x509.Certificate) (userObj HomeObject, err error
 	return
 }
 
+// checkApiUser : check if userObj has acces to level 'profil'
 func checkApiUser(userObj HomeObject) (profil userProfil, err error) {
 	i, err := userObj.getIntVal("IdProfil")
 	if err != nil {
@@ -188,6 +188,7 @@ func profilFilteredObjects(profil userProfil, objs []HomeObject) (filteredObjs [
 	return
 }
 
+// checkAccessToObject : check if 'profil' has acces to object
 func checkAccessToObject(profil userProfil, obj HomeObject) error {
 	if !obj.hasField("IdProfil") {
 		// HomeObject without IdProfil have no access restriction
@@ -205,6 +206,7 @@ func checkAccessToObject(profil userProfil, obj HomeObject) error {
 	return nil
 }
 
+// checkAccessToObjectId : check if 'profil' has acces to object (obj read from DB using objectid)
 func checkAccessToObjectId(profil userProfil, objectid int) error {
 	objs, err := getHomeObjects(nil, ItemNone, -1, objectid)
 	if err != nil {

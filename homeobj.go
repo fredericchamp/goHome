@@ -101,17 +101,21 @@ func (obj HomeObject) getIntVal(fieldName string) (value int, err error) {
 	if err != nil {
 		return
 	}
-	switch obj.Fields[idx].IdDataType {
-	case DBTypeBool, DBTypeInt, DBTypeDateTime:
-		value = obj.Values[idx].IntVal
-	case DBTypeText:
-		value, err = strconv.Atoi(obj.Values[idx].TextVal)
-	case DBTypeFloat:
-		err = errors.New(fmt.Sprintf("Not converting float to int for '%s' field", fieldName))
-	case DBTypeBlob:
-		err = errors.New(fmt.Sprintf("Not converting blob to int for '%s' field", fieldName))
-	default:
-		err = errors.New(fmt.Sprintf("Unknown data type %d for '%s' field", obj.Fields[idx].IdDataType, fieldName))
+	if len(obj.Values) < idx {
+		err = errors.New(fmt.Sprintf("No value for '%s' field", fieldName))
+	} else {
+		switch obj.Fields[idx].IdDataType {
+		case DBTypeBool, DBTypeInt, DBTypeDateTime:
+			value = obj.Values[idx].IntVal
+		case DBTypeText:
+			value, err = strconv.Atoi(obj.Values[idx].TextVal)
+		case DBTypeFloat:
+			err = errors.New(fmt.Sprintf("Not converting float to int for '%s' field", fieldName))
+		case DBTypeBlob:
+			err = errors.New(fmt.Sprintf("Not converting blob to int for '%s' field", fieldName))
+		default:
+			err = errors.New(fmt.Sprintf("Unknown data type %d for '%s' field", obj.Fields[idx].IdDataType, fieldName))
+		}
 	}
 	if err != nil {
 		glog.Error(err)
@@ -128,23 +132,27 @@ func (obj HomeObject) getStrVal(fieldName string) (value string, err error) {
 	if err != nil {
 		return
 	}
-	switch obj.Fields[idx].IdDataType {
-	case DBTypeBool:
-		if obj.Values[idx].IntVal == 0 {
-			value = "No"
-		} else {
-			value = "Yes"
+	if len(obj.Values) < idx {
+		err = errors.New(fmt.Sprintf("No value for '%s' field", fieldName))
+	} else {
+		switch obj.Fields[idx].IdDataType {
+		case DBTypeBool:
+			if obj.Values[idx].IntVal == 0 {
+				value = "No"
+			} else {
+				value = "Yes"
+			}
+		case DBTypeInt, DBTypeDateTime:
+			value = fmt.Sprint(obj.Values[idx].IntVal)
+		case DBTypeFloat:
+			value = fmt.Sprint(obj.Values[idx].FloatVal)
+		case DBTypeText:
+			value = obj.Values[idx].TextVal
+		case DBTypeBlob:
+			err = errors.New(fmt.Sprintf("Not converting blob to string for '%s' field", fieldName))
+		default:
+			err = errors.New(fmt.Sprintf("Unknown data type %d for '%s' field", obj.Fields[idx].IdDataType, fieldName))
 		}
-	case DBTypeInt, DBTypeDateTime:
-		value = fmt.Sprint(obj.Values[idx].IntVal)
-	case DBTypeFloat:
-		value = fmt.Sprint(obj.Values[idx].FloatVal)
-	case DBTypeText:
-		value = obj.Values[idx].TextVal
-	case DBTypeBlob:
-		err = errors.New(fmt.Sprintf("Not converting blob to string for '%s' field", fieldName))
-	default:
-		err = errors.New(fmt.Sprintf("Unknown data type %d for '%s' field", obj.Fields[idx].IdDataType, fieldName))
 	}
 	if err != nil {
 		glog.Error(err)
@@ -161,21 +169,25 @@ func (obj HomeObject) getByteVal(fieldName string) (value []byte, err error) {
 	if err != nil {
 		return
 	}
-	switch obj.Fields[idx].IdDataType {
-	case DBTypeBool:
-		if obj.Values[idx].IntVal == 0 {
-			value = []byte("No")
-		} else {
-			value = []byte("Yes")
+	if len(obj.Values) < idx {
+		err = errors.New(fmt.Sprintf("No value for '%s' field", fieldName))
+	} else {
+		switch obj.Fields[idx].IdDataType {
+		case DBTypeBool:
+			if obj.Values[idx].IntVal == 0 {
+				value = []byte("No")
+			} else {
+				value = []byte("Yes")
+			}
+		case DBTypeInt, DBTypeFloat, DBTypeDateTime:
+			value = []byte(fmt.Sprint(obj.Values[idx].IntVal))
+		case DBTypeText:
+			value = []byte(obj.Values[idx].TextVal)
+		case DBTypeBlob:
+			value = obj.Values[idx].ByteVal
+		default:
+			err = errors.New(fmt.Sprintf("Unknown data type %d for '%s' field", obj.Fields[idx].IdDataType, fieldName))
 		}
-	case DBTypeInt, DBTypeFloat, DBTypeDateTime:
-		value = []byte(fmt.Sprint(obj.Values[idx].IntVal))
-	case DBTypeText:
-		value = []byte(obj.Values[idx].TextVal)
-	case DBTypeBlob:
-		value = obj.Values[idx].ByteVal
-	default:
-		err = errors.New(fmt.Sprintf("Unknown data type %d for '%s' field", obj.Fields[idx].IdDataType, fieldName))
 	}
 	if err != nil {
 		glog.Error(err)
@@ -186,15 +198,19 @@ func (obj HomeObject) getByteVal(fieldName string) (value []byte, err error) {
 	return
 }
 
+// ValidateValues : check values are valid regarding obj.Fields
+func (obj HomeObject) ValidateValues(values []ItemFieldVal) (err error) { // TODO
+	return
+}
+
 // -----------------------------------------------
 
 // getLinkedObjects add to each objs[] corresponding linked objects
-// TODO : reorg/optimisation : currently need 1 db query for each objs[] + 1 db query for each linked obj
-func getLinkedObjects(db *sql.DB, objs []HomeObject) error {
+// todo : reorg/optimisation : currently need 1 db query for each objs[] + 1 db query for each linked obj
+func getLinkedObjects(db *sql.DB, objs []HomeObject) (err error) {
 	if db == nil {
-		db, err := openDB()
-		if err != nil {
-			return err
+		if db, err = openDB(); err != nil {
+			return
 		}
 		defer db.Close()
 	}
@@ -216,7 +232,7 @@ func getLinkedObjects(db *sql.DB, objs []HomeObject) error {
 		}
 
 	}
-	return nil
+	return
 }
 
 // getHomeObjects : read objects
@@ -225,8 +241,7 @@ func getLinkedObjects(db *sql.DB, objs []HomeObject) error {
 // Else Return all objects for ItemType idItemType
 func getHomeObjects(db *sql.DB, idItemType itemType, idItem int, idObject int) (objs []HomeObject, err error) {
 	if db == nil {
-		db, err = openDB()
-		if err != nil {
+		if db, err = openDB(); err != nil {
 			return
 		}
 		defer db.Close()
@@ -282,7 +297,7 @@ func getHomeObjects(db *sql.DB, idItemType itemType, idItem int, idObject int) (
 
 		// for each item, read objects
 		for _, item := range items {
-			lstObjs, err1 := getHomeObjects(db, ItemNone, item.Id, -1)
+			lstObjs, err1 := getHomeObjects(db, ItemNone, item.IdItem, -1)
 			if err1 != nil {
 				err = err1
 				return
@@ -294,5 +309,11 @@ func getHomeObjects(db *sql.DB, idItemType itemType, idItem int, idObject int) (
 
 	}
 
+	return
+}
+
+// writeObject : save object to db
+func writeObject(obj HomeObject) (objectid int, err error) {
+	objectid, err = writeItemFieldValues(nil, obj.Values)
 	return
 }
