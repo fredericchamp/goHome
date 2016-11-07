@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
 	"time"
 
 	"github.com/golang/glog"
@@ -33,8 +34,8 @@ const (
 
 type apiCommandSruct struct {
 	Command    apiCommand
-	Itemtypeid itemType
-	Itemid     int
+	Itemtypeid TItemType
+	Itemid     TItemId
 	Objectid   int
 	Startts    int64
 	Endts      int64
@@ -43,16 +44,27 @@ type apiCommandSruct struct {
 
 // -----------------------------------------------
 
-func apiError(errMsg string) (apiResp []byte) {
-	apiResp, err := json.Marshal(struct{ Error string }{errMsg})
+func apiResponse(msgName string, errMsg string) (apiResp []byte) {
+	jsonMsg, err := json.Marshal(errMsg)
 	if err != nil {
-		glog.Errorf("json.Marshal Failed for error message '%s'", errMsg)
-		apiResp = []byte(`{"error":"Error (json.Marshal Failed to error message)"}`)
+		glog.Errorf("json.Marshal Failed for response message '%s'", errMsg)
+		apiResp = apiError("Error (json.Marshal Failed for response message)")
 	}
+	apiResp = []byte(fmt.Sprintf(`{"%s":"%s"}`, msgName, jsonMsg))
 	return
 }
 
-func fctApiReadItem(profil userProfil, jsonCmde apiCommandSruct) (apiResp []byte) {
+func apiError(errMsg string) (apiResp []byte) {
+	apiResp = apiResponse("error", errMsg)
+	//	apiResp, err := json.Marshal(struct{ Error string }{errMsg})
+	//	if err != nil {
+	//		glog.Errorf("json.Marshal Failed for error message '%s'", errMsg)
+	//		apiResp = []byte(`{"error":"Error (json.Marshal Failed for error message)"}`)
+	//	}
+	return
+}
+
+func fctApiReadItem(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []byte) {
 	items, err := getManageItems(nil, jsonCmde.Itemtypeid, jsonCmde.Itemid)
 	if err != nil {
 		apiResp = apiError(fmt.Sprintf("%s failed for (type=%d, item=%d) : %s", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, err))
@@ -67,7 +79,7 @@ func fctApiReadItem(profil userProfil, jsonCmde apiCommandSruct) (apiResp []byte
 	return
 }
 
-func fctApiReadObject(profil userProfil, jsonCmde apiCommandSruct) (apiResp []byte) {
+func fctApiReadObject(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []byte) {
 	objs, err := getHomeObjects(nil, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid)
 	if err != nil {
 		apiResp = apiError(fmt.Sprintf("%s failed for (type=%d, item=%d, obj=%d) : %s", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid, err))
@@ -82,8 +94,8 @@ func fctApiReadObject(profil userProfil, jsonCmde apiCommandSruct) (apiResp []by
 	return
 }
 
-func fctApiReadSensor(profil userProfil, jsonCmde apiCommandSruct) (apiResp []byte) {
-	objs, err := getHomeObjects(nil, ItemNone, -1, jsonCmde.Objectid)
+func fctApiReadSensor(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []byte) {
+	objs, err := getHomeObjects(nil, ItemTypeNone, ItemIdNone, jsonCmde.Objectid)
 	if err != nil {
 		apiResp = apiError(fmt.Sprintf("%s failed for (obj=%d) : %s", jsonCmde.Command, jsonCmde.Objectid, err))
 		return
@@ -114,7 +126,7 @@ func fctApiReadSensor(profil userProfil, jsonCmde apiCommandSruct) (apiResp []by
 	return
 }
 
-func fctApiReadHistoVal(profil userProfil, jsonCmde apiCommandSruct) (apiResp []byte) {
+func fctApiReadHistoVal(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []byte) {
 	last := false
 	if (jsonCmde.Startts <= 0 && jsonCmde.Endts <= 0) || jsonCmde.Startts > time.Now().Unix() {
 		last = true
@@ -141,7 +153,7 @@ func fctApiReadHistoVal(profil userProfil, jsonCmde apiCommandSruct) (apiResp []
 	return
 }
 
-func fctApiReadActorRes(profil userProfil, jsonCmde apiCommandSruct) (apiResp []byte) {
+func fctApiReadActorRes(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []byte) {
 	last := false
 	if (jsonCmde.Startts <= 0 && jsonCmde.Endts <= 0) || jsonCmde.Startts > time.Now().Unix() {
 		last = true
@@ -168,7 +180,7 @@ func fctApiReadActorRes(profil userProfil, jsonCmde apiCommandSruct) (apiResp []
 	return
 }
 
-func fctApiSaveObject(profil userProfil, jsonCmde apiCommandSruct) (apiResp []byte) {
+func fctApiSaveObject(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []byte) {
 	var objIn HomeObject
 	if err := json.Unmarshal([]byte(jsonCmde.Jsonparam), &objIn); err != nil {
 		apiResp = apiError(fmt.Sprintf("%s fail to unmarshal jsonparam (%s) : %s", jsonCmde.Command, jsonCmde.Jsonparam, err))
@@ -229,12 +241,6 @@ func fctApiSaveObject(profil userProfil, jsonCmde apiCommandSruct) (apiResp []by
 		objFields = fields
 	}
 
-	// TODO check profil access rights on item holding object to save ?
-	//	if err = checkAccessToObjectId(profil, objDb.Fields[0].IdItem); err != nil {
-	//		apiResp = apiError(err.Error())
-	//		return
-	//	}
-
 	// Check objIn fields match objDb fields
 	if !reflect.DeepEqual(objIn.Fields, objFields) {
 		apiResp = apiError(fmt.Sprintf("%s received []Fields does not match []Fields in DB for itemid=%d", jsonCmde.Command, jsonCmde.Itemid))
@@ -248,9 +254,24 @@ func fctApiSaveObject(profil userProfil, jsonCmde apiCommandSruct) (apiResp []by
 		return
 	}
 
+	// if user => reload user list : loadUsers(nil, tue)
+	if strIdItemUser, err := getGlobalParam(nil, -1, "Global", "UserItemId"); err != nil {
+		apiResp = apiError(fmt.Sprintf("fctApiSaveObject : get UserItemId fail : %s", err))
+		return
+	} else {
+		idItemUser, err := strconv.Atoi(strIdItemUser)
+		if err != nil {
+			apiResp = apiError(fmt.Sprintf("fctApiSaveObject : get int(UserItemId) fail : %s", err))
+			return
+		}
+		if TItemId(idItemUser) == objFields[0].IdItem {
+			go loadUsers(nil, true)
+		}
+	}
+
 	// return saved object
-	jsonCmde.Itemtypeid = ItemNone
-	jsonCmde.Itemid = -1
+	jsonCmde.Itemtypeid = ItemTypeNone
+	jsonCmde.Itemid = ItemIdNone
 	jsonCmde.Objectid = objectid
 	if glog.V(2) {
 		glog.Infof("fctApiReadObject for id=%d", jsonCmde.Objectid)
@@ -258,4 +279,22 @@ func fctApiSaveObject(profil userProfil, jsonCmde apiCommandSruct) (apiResp []by
 	apiResp = fctApiReadObject(profil, jsonCmde)
 
 	return
+}
+
+func fctApiTriggerActor(profil TUserProfil, userId int, jsonCmde apiCommandSruct) (apiResp []byte) {
+	if err := checkAccessToObjectId(profil, jsonCmde.Objectid); err != nil {
+		apiResp = apiError(err.Error())
+		return
+	}
+
+	result, err := triggerActorById(jsonCmde.Objectid, userId, jsonCmde.Jsonparam)
+	if err != nil {
+		apiResp = apiError(err.Error())
+		return
+	}
+
+	apiResp = apiResponse("response", result)
+
+	return
+
 }

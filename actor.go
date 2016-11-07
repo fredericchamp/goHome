@@ -5,14 +5,14 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"sync"
+	//	"sync"
 	"time"
 
 	"github.com/golang/glog"
 )
 
-var actorsMapLock sync.Mutex
-var actorsMap = map[string]HomeObject{}
+//var actorsMapLock sync.Mutex
+//var actorsMap = map[string]HomeObject{}
 
 func init() {
 	RegisterInternalFunc(ActorFunc, "GPIO", ActorGPIO)
@@ -22,74 +22,85 @@ func init() {
 // actorSetup : read defined actors from DB then create a ticker and start reading goroutine for each actor
 func actorSetup(db *sql.DB) (err error) {
 
-	actorObjs, err := getHomeObjects(db, ItemActor, -1, -1)
-	if err != nil {
-		return
-	}
-	if glog.V(2) {
-		glog.Info("\nActor\n", actorObjs)
-	}
+	//	actorObjs, err := getHomeObjects(db, ItemActor, ItemIdNone, -1)
+	//	if err != nil {
+	//		return
+	//	}
+	//	if glog.V(2) {
+	//		glog.Info("\nActor\n", actorObjs)
+	//	}
 
-	actorsMapLock.Lock()
-	defer actorsMapLock.Unlock()
+	//	actorsMapLock.Lock()
+	//	defer actorsMapLock.Unlock()
 
-	for _, actor := range actorObjs {
+	//	for _, actor := range actorObjs {
 
-		isActive, err := actor.getIntVal("IsActive")
-		if err != nil {
-			return err
-		}
-		if isActive == 0 {
-			continue
-		}
+	//		isActive, err := actor.getIntVal("IsActive")
+	//		if err != nil {
+	//			return err
+	//		}
+	//		if isActive == 0 {
+	//			continue
+	//		}
 
-		actorName, err := actor.getStrVal("Name")
-		if err != nil {
-			return err
-		}
+	//		actorName, err := actor.getStrVal("Name")
+	//		if err != nil {
+	//			return err
+	//		}
 
-		actorsMap[actorName] = actor
-	}
+	//		actorsMap[actorName] = actor
+	//	}
 
-	if glog.V(1) {
-		glog.Infof("actorSetup Done (%d)", len(actorsMap))
-	}
+	//	if glog.V(1) {
+	//		glog.Infof("actorSetup Done (%d)", len(actorsMap))
+	//	}
 
 	return
 }
 
 // triggerActorById : trigger actor function using ActCmd, restirered parameter 'ActParam' and dynamic param 'param'
-func triggerActorById(actorId int, param string) (result string, err error) {
-	actorsMapLock.Lock()
-	defer actorsMapLock.Unlock()
-	for _, actor := range actorsMap {
-		if actor.getId() == actorId {
-			result, err = triggerObjActor(actor, param)
-			return
-		}
-	}
-	err = errors.New(fmt.Sprintf("No known actor with id = %d", actorId))
-	glog.Error(err)
+func triggerActorById(actorId int, userId int, param string) (result string, err error) {
+	//	actorsMapLock.Lock()
+	//	defer actorsMapLock.Unlock()
+	//	for _, actor := range actorsMap {
+	//		if actor.getId() == actorId {
+	//			result, err = triggerObjActor(actor, userId, param)
+	//			return
+	//		}
+	//	}
+	//	err = errors.New(fmt.Sprintf("No known actor with id = %d", actorId))
+	//	glog.Error(err)
 
+	objs, err := getHomeObjects(nil, ItemTypeNone, ItemIdNone, actorId)
+	if err != nil {
+		return
+	}
+	if len(objs) <= 0 {
+		err = errors.New(fmt.Sprintf("No actor with id = %d", actorId))
+		glog.Error(err)
+	}
+	actor := objs[0]
+
+	result, err = triggerObjActor(actor, userId, param)
 	return
 }
 
 // triggerActorByName : trigger actor function using ActCmd, restirered parameter 'ActParam' and dynamic param 'param'
-func triggerActorByName(actorName string, param string) (result string, err error) {
-	actorsMapLock.Lock()
-	actor, found := actorsMap[actorName]
-	actorsMapLock.Unlock()
-	if !found {
-		err = errors.New(fmt.Sprintf("No known actor '%s'", actorName))
-		glog.Error(err)
-		return
-	}
-	result, err = triggerObjActor(actor, param)
-	return
-}
+//func triggerActorByName(actorName string, userId int, param string) (result string, err error) {
+//	actorsMapLock.Lock()
+//	actor, found := actorsMap[actorName]
+//	actorsMapLock.Unlock()
+//	if !found {
+//		err = errors.New(fmt.Sprintf("No known actor '%s'", actorName))
+//		glog.Error(err)
+//		return
+//	}
+//	result, err = triggerObjActor(actor, userId, param)
+//	return
+//}
 
 // triggerObjActor : trigger actor function using ActCmd, restirered parameter 'ActParam' and dynamic param 'param'
-func triggerObjActor(actor HomeObject, param string) (result string, err error) {
+func triggerObjActor(actor HomeObject, userId int, param string) (result string, err error) {
 	result = "Failed"
 	actCmd, err := actor.getStrVal("ActCmd")
 	if err != nil {
@@ -110,23 +121,23 @@ func triggerObjActor(actor HomeObject, param string) (result string, err error) 
 		result, err = LaunchExternalCmd(ActorFunc, actCmd, actParam, param)
 	}
 
-	go recordActorResult(actor, param, result)
+	go recordActorResult(actor, userId, param, result)
 
 	return
 }
 
 // actorCleanup : stop and remove all actor ticker
 func actorCleanup() {
-	actorsMapLock.Lock()
-	actorsMap = make(map[string]HomeObject)
-	actorsMapLock.Unlock()
-	if glog.V(1) {
-		glog.Info("actorCleanup Done")
-	}
+	//	actorsMapLock.Lock()
+	//	actorsMap = make(map[string]HomeObject)
+	//	actorsMapLock.Unlock()
+	//	if glog.V(1) {
+	//		glog.Info("actorCleanup Done")
+	//	}
 }
 
 // recordActorResult : store in DB param and result for an actor
-func recordActorResult(actor HomeObject, param string, result string) {
+func recordActorResult(actor HomeObject, userId int, param string, result string) {
 	db, err := openDB()
 	if err != nil {
 		return
@@ -135,9 +146,9 @@ func recordActorResult(actor HomeObject, param string, result string) {
 
 	actorId := actor.getId()
 
-	_, err = db.Exec("insert into HistoActor values ( ?, ?, ?, ?);", time.Now().Unix(), actorId, param, result)
+	_, err = db.Exec("insert into HistoActor values ( ?, ?, ?, ?, ?);", time.Now().Unix(), actorId, userId, param, result)
 	if err != nil {
-		glog.Errorf("Fail to store result (%s) for actor %d from : %s ", result, actorId, err)
+		glog.Errorf("Fail to store result (%s) for actor %d : %s ", result, actorId, err)
 	}
 	if glog.V(1) {
 		glog.Infof("recordActorResult : %d - %s - %s", time.Now().Unix(), param, result)

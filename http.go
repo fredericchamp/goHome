@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/golang/glog"
 )
@@ -47,41 +49,33 @@ func writeApiError(w http.ResponseWriter, errMsg string) {
 
 // -----------------------------------------------
 
-// defaultResponse : when a request is not properly form or handle ... was useful during dev
-//func defaultResponse(w http.ResponseWriter, r *http.Request, userObj HomeObject, profil userProfil, err error) {
-//	const header = `<!-- HEADER -->
-//<html>
-//<head>
-//<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-//<meta name="viewport" content="width=device-width, initial-scale=1">
-//<title>goHome</title>
-//</head>
-//<body>
-//`
-//	const footer = `<!-- FOOTER -->
-//<br><br>
-//<p align="center">-*-</p>
-//<p align="center">%s</p>
-//</body>
-//</html>
-//`
-//	if err != nil {
-//		writeJsonError(w, err.Error())
-//		return
-//	}
-//	fmt.Fprintf(w, header)
-//	fmt.Fprintf(w, "<p>goHome HTTPS server<p>\n")
-//	fmt.Fprintf(w, "<p>goHome version %s</p>\n", goHomeVersion)
-//	fmt.Fprintf(w, "<p>URL requested : %s </p>\n", r.URL.Path)
-//	fmt.Fprintf(w, "<p>Post params : %s</p>\n", r.Form)
-//	fmt.Fprintf(w, "<p>User : %s</p>\n", userObj)
-//	fmt.Fprintf(w, footer, time.Now().String())
-//}
+// defaultResponse : for testing only
+func defaultResponse(w http.ResponseWriter, r *http.Request) {
+	const header = `<!-- HEADER -->
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>goHome</title>
+</head>
+<body>
+`
+	const footer = `<!-- FOOTER -->
+<br><br>
+<p align="center">-*-</p>
+<p align="center">%s</p>
+</body>
+</html>
+`
+	fmt.Fprintf(w, header)
+	fmt.Fprintf(w, "<p>goHome HTTPS server<p>\n")
+	fmt.Fprintf(w, "<p>goHome version %s</p>\n", goHomeVersion)
+	fmt.Fprintf(w, "<p>URL requested : %s </p>\n", r.URL.Path)
+	fmt.Fprintf(w, "<p>Post params : %s</p>\n", r.Form)
+	fmt.Fprintf(w, footer, time.Now().String())
+}
 
 // -----------------------------------------------
-// URL handlers
-
-// TODO proxy (video stream)
 
 // apiHandler : handle API requests
 func apiHandler(w http.ResponseWriter, r *http.Request) {
@@ -137,20 +131,6 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		if glog.V(1) {
 			glog.Infof("%s (type=%d, item=%d)", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid)
 		}
-		/*
-			items, err := getManageItems(nil, jsonCmde.Itemtypeid, jsonCmde.Itemid)
-			if err != nil {
-				writeJsonError(w, fmt.Sprintf("%s failed for (type=%d, item=%d) : %s", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, err))
-				return
-			}
-
-			jsonEncoded, err := json.Marshal(profilFilteredItems(profil, items))
-			if err != nil {
-				writeJsonError(w, fmt.Sprintf("%s failed for (type=%d, item=%d) : %s", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, err))
-				return
-			}
-			w.Write(jsonEncoded)
-		*/
 		w.Write(fctApiReadItem(profil, jsonCmde))
 		return
 
@@ -158,21 +138,6 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		if glog.V(1) {
 			glog.Infof("%s (type=%d, item=%d, obj=%d)", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid)
 		}
-		/*
-			objs, err := getHomeObjects(nil, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid)
-			if err != nil {
-				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
-				return
-			}
-
-			jsonEncoded, err := json.Marshal(profilFilteredObjects(profil, objs))
-			if err != nil {
-				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
-				return
-			}
-
-			w.Write(jsonEncoded)
-		*/
 		w.Write(fctApiReadObject(profil, jsonCmde))
 		return
 
@@ -180,38 +145,6 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		if glog.V(1) {
 			glog.Infof("%s (objectid=%d)", jsonCmde.Command, jsonCmde.Objectid)
 		}
-		/*
-			objs, err := getHomeObjects(nil, ItemNone, -1, jsonCmde.Objectid)
-			if err != nil {
-				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
-				return
-			}
-			if len(objs) <= 0 {
-				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : object not found", jsonCmde.Command, r.Form))
-				return
-			}
-			sensor := objs[0]
-
-			err = checkAccessToObject(profil, sensor)
-			if err != nil {
-				writeJsonError(w, err.Error())
-				return
-			}
-
-			value, err := readSensoValue(sensor)
-			if err != nil {
-				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
-				return
-			}
-
-			jsonEncoded, err := json.Marshal(value)
-			if err != nil {
-				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
-				return
-			}
-
-			w.Write(jsonEncoded)
-		*/
 		w.Write(fctApiReadSensor(profil, jsonCmde))
 		return
 
@@ -219,32 +152,6 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		if glog.V(1) {
 			glog.Infof("%s (obj=%d, start=%d, end=%d)", jsonCmde.Command, jsonCmde.Objectid, jsonCmde.Startts, jsonCmde.Endts)
 		}
-		/*
-			last := false
-			if (jsonCmde.Startts <= 0 && jsonCmde.Endts <= 0) || jsonCmde.Startts > time.Now().Unix() {
-				last = true
-			}
-
-			err = checkAccessToObjectId(profil, jsonCmde.Objectid)
-			if err != nil {
-				writeJsonError(w, err.Error())
-				return
-			}
-
-			sVals, err := getHistoSensor(nil, jsonCmde.Objectid, last, time.Unix(jsonCmde.Startts, 0), time.Unix(jsonCmde.Endts, 0))
-			if err != nil {
-				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
-				return
-			}
-
-			jsonEncoded, err := json.Marshal(sVals)
-			if err != nil {
-				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
-				return
-			}
-
-			w.Write(jsonEncoded)
-		*/
 		w.Write(fctApiReadHistoVal(profil, jsonCmde))
 		return
 
@@ -252,32 +159,6 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		if glog.V(1) {
 			glog.Infof("%s (objectid=%d, start=%d, end=%d)", jsonCmde.Command, jsonCmde.Objectid, jsonCmde.Startts, jsonCmde.Endts)
 		}
-		/*
-			last := false
-			if (jsonCmde.Startts <= 0 && jsonCmde.Endts <= 0) || jsonCmde.Startts > time.Now().Unix() {
-				last = true
-			}
-
-			err = checkAccessToObjectId(profil, jsonCmde.Objectid)
-			if err != nil {
-				writeJsonError(w, err.Error())
-				return
-			}
-
-			aVals, err := getHistActor(nil, jsonCmde.Objectid, last, time.Unix(jsonCmde.Startts, 0), time.Unix(jsonCmde.Endts, 0))
-			if err != nil {
-				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
-				return
-			}
-
-			jsonEncoded, err := json.Marshal(aVals)
-			if err != nil {
-				writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
-				return
-			}
-
-			w.Write(jsonEncoded)
-		*/
 		w.Write(fctApiReadActorRes(profil, jsonCmde))
 		return
 
@@ -293,79 +174,6 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		if glog.V(1) {
 			glog.Infof("%s (type=%d, item=%d, obj=%d)", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid)
 		}
-		/*
-			var objIn HomeObject
-			if err = json.Unmarshal([]byte(jsonCmde.Jsonparam), &objIn); err != nil {
-				writeJsonError(w, fmt.Sprintf("%s fail to unmarshal jsonparam (%s) : %s", jsonCmde.Command, jsonCmde.Jsonparam, err))
-				return
-			}
-
-			// load object from db
-			objs, err := getHomeObjects(nil, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid)
-			if err != nil {
-				writeJsonError(w, fmt.Sprintf("%s fail to load matching object (%s) : %s", jsonCmde.Command, jsonCmde.Objectid, err))
-				return
-			}
-			if len(objs) != 1 {
-				writeJsonError(w, fmt.Sprintf("%s should have only 1 matching object, not %d", jsonCmde.Command, len(objs)))
-				return
-			}
-			objDb := objs[0]
-
-			// check profil access rights on item
-			if err = checkAccessToObjectId(profil, objDb.Fields[0].IdItem); err != nil {
-				writeJsonError(w, err.Error())
-				return
-			}
-
-			// Check objIn fieldsand objDb fields are the same
-			if !reflect.DeepEqual(objIn.Fields, objDb.Fields) {
-				writeJsonError(w, fmt.Sprintf("%s received []Fields does not match []Fields in DB for itemid=%d", jsonCmde.Command, jsonCmde.Itemid))
-				return
-			}
-
-			if err = objIn.ValidateValues(objIn.Values); err != nil {
-				writeJsonError(w, fmt.Sprintf("%s : %s", jsonCmde.Command, err.Error()))
-				return
-			}
-
-			if jsonCmde.Objectid > 0 {
-				// check profil access rights on existing object
-				if err = checkAccessToObject(profil, objDb); err != nil {
-					writeJsonError(w, err.Error())
-					return
-				}
-			}
-
-			// check profil access rights on new object
-			if err = checkAccessToObject(profil, objIn); err != nil {
-				writeJsonError(w, err.Error())
-				return
-			}
-
-			// write object to DB
-			if jsonCmde.Objectid, err = writeObject(objIn); err != nil {
-				writeJsonError(w, err.Error())
-				return
-			}
-
-			// Code copy from apiReadObject [-----------------------------
-			objs, err = getHomeObjects(nil, ItemNone, -1, jsonCmde.Objectid)
-			if err != nil {
-				writeJsonError(w, fmt.Sprintf("%s failed for (objectid=%d) : %s", jsonCmde.Command, jsonCmde.Objectid, err))
-				return
-			}
-
-			jsonEncoded, err := json.Marshal(profilFilteredObjects(profil, objs))
-			if err != nil {
-				writeJsonError(w, fmt.Sprintf("%s json.Marshal failed for (%s) : %s", jsonCmde.Command, jsonCmde.Objectid, err))
-				return
-			}
-
-			w.Write(jsonEncoded)
-			// ----------------------------------------------------------]
-
-		*/
 		w.Write(fctApiSaveObject(profil, jsonCmde))
 		return
 
@@ -378,7 +186,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		//			glog.Infof("%s (type=%d, item=%d, obj=%d)", jsonCmde.Command, jsonCmde.Objectid, jsonCmde.Value)
 		//		}
 
-		//		objs, err := getHomeObjects(nil, ItemNone, -1, jsonCmde.Objectid)
+		//		objs, err := getHomeObjects(nil, ItemNone, ItemIdNone, jsonCmde.Objectid)
 		//		if err != nil {
 		//			writeJsonError(w, fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, r.Form, err))
 		//			return
@@ -390,8 +198,11 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		writeApiError(w, fmt.Sprintf("Command %s not ready", jsonCmde.Command))
 		return
 
-	case apiTriggerActor: // TODO
-		writeApiError(w, fmt.Sprintf("Command %s not ready", jsonCmde.Command))
+	case apiTriggerActor:
+		if glog.V(1) {
+			glog.Infof("%s (type=%d, item=%d, obj=%d)", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid)
+		}
+		w.Write(fctApiTriggerActor(profil, userObj.getId(), jsonCmde))
 		return
 
 	default:
@@ -419,12 +230,12 @@ func startHTTPS(chanExit chan bool) {
 		chanExit <- true
 		return
 	}
-	// defer db.Close() dont do that, if ListenAndServeTLS run fine, it wont return !
+	// defer db.Close() dont use that, if ListenAndServeTLS run fine, it wont return !
 
 	//-----------------------------
 	// Read global param from DB
 
-	fileServerRoot, err := getGlobalParam(db, -1, "goHome", "fileserver_root")
+	fileServerRoot, err := getGlobalParam(db, -1, "Http", "fileserver_root")
 	if err != nil {
 		chanExit <- true
 		return
@@ -433,15 +244,15 @@ func startHTTPS(chanExit chan bool) {
 		glog.Infof("FileServer root dir = '%s'", fileServerRoot)
 	}
 
-	serverName, err := getGlobalParam(db, -1, "goHome", "server_name")
+	serverName, err := getGlobalParam(db, -1, "Http", "server_name")
 	if err != nil {
-		glog.Errorf("Error in startHTTPS ... exiting", err)
+		glog.Errorf("Error in startHTTPS ... exiting : %s", err)
 		chanExit <- true
 		return
 	}
-	value, err := getGlobalParam(db, -1, "goHome", "https_port")
+	value, err := getGlobalParam(db, -1, "Http", "https_port")
 	if err != nil {
-		glog.Errorf("Error in startHTTPS ... exiting", err)
+		glog.Errorf("Error in startHTTPS ... exiting : %s", err)
 		chanExit <- true
 		return
 	}
@@ -452,37 +263,58 @@ func startHTTPS(chanExit chan bool) {
 		return
 	}
 
-	serverCrtFileName, err := getGlobalParam(db, -1, "goHome", "server_crt")
+	serverCrtFileName, err := getGlobalParam(db, -1, "Http", "server_crt")
 	if err != nil {
-		glog.Errorf("Error in startHTTPS ... exiting", err)
+		glog.Errorf("Error in startHTTPS ... exiting : %s", err)
 		chanExit <- true
 		return
 	}
-	serverKeyFileName, err := getGlobalParam(db, -1, "goHome", "server_key")
+	serverKeyFileName, err := getGlobalParam(db, -1, "Http", "server_key")
 	if err != nil {
-		glog.Errorf("Error in startHTTPS ... exiting", err)
+		glog.Errorf("Error in startHTTPS ... exiting : %s", err)
 		chanExit <- true
 		return
 	}
-	caCertFileName, err := getGlobalParam(db, -1, "goHome", "ca_crt")
+	caCertFileName, err := getGlobalParam(db, -1, "Http", "ca_crt")
 	if err != nil {
-		glog.Errorf("Error in startHTTPS ... exiting", err)
+		glog.Errorf("Error in startHTTPS ... exiting : %s", err)
 		chanExit <- true
 		return
 	}
-
-	//-----------------------------
-
-	db.Close()
 
 	//-----------------------------
 
 	serverMux := http.NewServeMux() // Create dedicated ServeMux, rather than using http.defaultServeMux
+
+	//-----------------------------
+
+	proxyMap, err := getGlobalParamList(db, "Proxy")
+	if err != nil {
+		glog.Errorf("Error in startHTTPS ... exiting : %s", err)
+		chanExit <- true
+		return
+	}
+	for source, target := range proxyMap {
+		url, err := url.Parse(target)
+		if err != nil {
+			glog.Errorf("startHTTPS fail to parse proxy url target(%s) : %s", target, err)
+		}
+		if glog.V(1) {
+			glog.Infof("Adding proxy (from=%s, to=%s)", source, target)
+		}
+
+		serverMux.Handle(source, http.StripPrefix(source, httputil.NewSingleHostReverseProxy(url)))
+	}
+
 	// Note : access to "/api", apiHandler required a registered user in DB
-	serverMux.HandleFunc("/json", apiHandler)
 	serverMux.HandleFunc("/api", apiHandler)
-	// Note : access to "/", FileServer only required a valid certificat (valid regarding caCertPool)
+	//serverMux.HandleFunc("/tst/", defaultResponse)
+
 	serverMux.Handle("/", http.FileServer(http.Dir(fileServerRoot)))
+
+	//-----------------------------
+
+	db.Close()
 
 	//-----------------------------
 

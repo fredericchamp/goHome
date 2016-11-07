@@ -43,7 +43,7 @@ func init() {
 // sensorSetup : read defined sensors from DB then create a ticker and start reading goroutine for each sensor
 func sensorSetup(db *sql.DB) (err error) {
 
-	sensorObjs, err := getHomeObjects(db, ItemSensor, 1, -1)
+	sensorObjs, err := getHomeObjects(db, ItemSensor, ItemIdNone, -1)
 	if err != nil {
 		return
 	}
@@ -75,6 +75,11 @@ func sensorSetup(db *sql.DB) (err error) {
 		durationStr, err := sensor.getStrVal("Interval")
 		if err != nil {
 			return err
+		}
+
+		// for empty duration, dont setup ticker
+		if len(strings.Trim(durationStr, " ")) <= 0 {
+			continue
 		}
 
 		duration, err := time.ParseDuration(durationStr)
@@ -199,7 +204,7 @@ func recordSensorValue(t time.Time, sensor HomeObject, value string) {
 		return
 	}
 
-	switch dataType {
+	switch TDataType(dataType) {
 	case DBTypeBool, DBTypeInt, DBTypeDateTime:
 		intVal, err := strconv.Atoi(value)
 		if err != nil {
@@ -275,7 +280,7 @@ func triggerSensorAct(sensorAct HomeObject, sensorName string, prevVal string, l
 			return
 		}
 
-		triggerActorById(actorId, actorParam)
+		triggerActorById(actorId, 1, actorParam)
 	}
 
 }

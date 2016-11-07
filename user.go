@@ -11,12 +11,11 @@ import (
 	"sync"
 
 	"github.com/golang/glog"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 // -----------------------------------------------
 
-type userProfil int
+type TUserProfil int
 
 const (
 	ProfilNone = iota
@@ -24,7 +23,7 @@ const (
 	ProfilUser
 )
 
-var userProfilNames = map[userProfil]string{
+var userProfilNames = map[TUserProfil]string{
 	ProfilNone:  "No privilege",
 	ProfilAdmin: "Administrator",
 	ProfilUser:  "User",
@@ -74,7 +73,7 @@ func loadUsers(db *sql.DB, force bool) (nbUser int, err error) {
 		return
 	}
 
-	value, err := getGlobalParam(db, -1, "goHome", "UserItemId")
+	value, err := getGlobalParam(db, -1, "Global", "UserItemId")
 	if err != nil {
 		return
 	}
@@ -85,7 +84,7 @@ func loadUsers(db *sql.DB, force bool) (nbUser int, err error) {
 	}
 
 	// read all users
-	userList, err = getHomeObjects(db, ItemNone, userItemId, -1)
+	userList, err = getHomeObjects(db, ItemTypeNone, TItemId(userItemId), -1)
 
 	nbUser = len(userList)
 
@@ -144,12 +143,12 @@ func getUserFromCert(peerCrt []*x509.Certificate) (userObj HomeObject, err error
 }
 
 // checkApiUser : check if userObj has acces to level 'profil'
-func checkApiUser(userObj HomeObject) (profil userProfil, err error) {
+func checkApiUser(userObj HomeObject) (profil TUserProfil, err error) {
 	i, err := userObj.getIntVal("IdProfil")
 	if err != nil {
 		return
 	}
-	profil = userProfil(i)
+	profil = TUserProfil(i)
 	if profil <= ProfilNone {
 		err = errors.New("insufficient privileges")
 		return
@@ -167,9 +166,9 @@ func checkApiUser(userObj HomeObject) (profil userProfil, err error) {
 }
 
 // profilFilteredItems : return an []Item with only Item matching user profil
-func profilFilteredItems(profil userProfil, items []Item) (filteredItems []Item) {
+func profilFilteredItems(profil TUserProfil, items []Item) (filteredItems []Item) {
 	for _, item := range items {
-		if item.IdProfil < int(profil) {
+		if item.IdProfil < profil {
 			continue
 		}
 		filteredItems = append(filteredItems, item)
@@ -178,7 +177,7 @@ func profilFilteredItems(profil userProfil, items []Item) (filteredItems []Item)
 }
 
 // profilFilteredObjects : return an []HomeObject with only Item matching user profil
-func profilFilteredObjects(profil userProfil, objs []HomeObject) (filteredObjs []HomeObject) {
+func profilFilteredObjects(profil TUserProfil, objs []HomeObject) (filteredObjs []HomeObject) {
 	for _, obj := range objs {
 		if checkAccessToObject(profil, obj) != nil {
 			continue
@@ -188,8 +187,15 @@ func profilFilteredObjects(profil userProfil, objs []HomeObject) (filteredObjs [
 	return
 }
 
+func checkAccess(profilObject TUserProfil, profilAccess TUserProfil) error {
+	if (profilAccess == ProfilNone && profilObject > ProfilNone) || profilObject < profilAccess {
+		return errors.New("insufficient privileges")
+	}
+	return nil
+}
+
 // checkAccessToObject : check if 'profil' has acces to object
-func checkAccessToObject(profil userProfil, obj HomeObject) error {
+func checkAccessToObject(profil TUserProfil, obj HomeObject) error {
 	if !obj.hasField("IdProfil") {
 		// HomeObject without IdProfil have no access restriction
 		return nil
@@ -199,16 +205,16 @@ func checkAccessToObject(profil userProfil, obj HomeObject) error {
 		return err
 	}
 
-	if profil == ProfilNone || userProfil(iProfil) < profil {
+	if profil == ProfilNone || TUserProfil(iProfil) < profil {
 		return errors.New("insufficient privileges")
 	}
 
-	return nil
+	return checkAccess(TUserProfil(iProfil), profil)
 }
 
 // checkAccessToObjectId : check if 'profil' has acces to object (obj read from DB using objectid)
-func checkAccessToObjectId(profil userProfil, objectid int) error {
-	objs, err := getHomeObjects(nil, ItemNone, -1, objectid)
+func checkAccessToObjectId(profil TUserProfil, objectid int) error {
+	objs, err := getHomeObjects(nil, ItemTypeNone, ItemIdNone, objectid)
 	if err != nil {
 		return err
 	}

@@ -8,49 +8,27 @@ import (
 	"strconv"
 
 	"github.com/golang/glog"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 // -----------------------------------------------
-
-type itemType int
-
-const (
-	ItemNone itemType = iota
-	ItemEntity
-	ItemSensor
-	ItemActor
-	ItemSensorAct
-	ItemVideoSensor // TODO
-)
-
-var itemTypeNames = map[itemType]string{
-	ItemNone:        "None",
-	ItemEntity:      "Entity",
-	ItemSensor:      "Sensor",
-	ItemActor:       "Actor",
-	ItemSensorAct:   "Actor trigger by sensor",
-	ItemVideoSensor: "VideoSensor",
-}
-
-// -----------------------------------------------
+type TDataType int
 
 const (
-	DBTypeBool = 1 + iota
+	DBTypeBool TDataType = 1 + iota
 	DBTypeInt
 	DBTypeFloat
 	DBTypeText
 	DBTypeDateTime
-	DBTypeBlob
+	DBTypeFileName
 )
 
-var dbTypeNames = map[int]string{
+var dbTypeNames = map[TDataType]string{
 	DBTypeBool:     "Boolean",
 	DBTypeInt:      "Integer",
 	DBTypeFloat:    "Float",
 	DBTypeText:     "Text",
 	DBTypeDateTime: "DateTime",
-	DBTypeBlob:     "Bytes",
+	DBTypeFileName: "FileName",
 }
 
 // -----------------------------------------------
@@ -111,8 +89,8 @@ func (obj HomeObject) getIntVal(fieldName string) (value int, err error) {
 			value, err = strconv.Atoi(obj.Values[idx].TextVal)
 		case DBTypeFloat:
 			err = errors.New(fmt.Sprintf("Not converting float to int for '%s' field", fieldName))
-		case DBTypeBlob:
-			err = errors.New(fmt.Sprintf("Not converting blob to int for '%s' field", fieldName))
+		case DBTypeFileName:
+			err = errors.New(fmt.Sprintf("Not converting filename to int for '%s' field", fieldName))
 		default:
 			err = errors.New(fmt.Sprintf("Unknown data type %d for '%s' field", obj.Fields[idx].IdDataType, fieldName))
 		}
@@ -146,45 +124,8 @@ func (obj HomeObject) getStrVal(fieldName string) (value string, err error) {
 			value = fmt.Sprint(obj.Values[idx].IntVal)
 		case DBTypeFloat:
 			value = fmt.Sprint(obj.Values[idx].FloatVal)
-		case DBTypeText:
+		case DBTypeText, DBTypeFileName:
 			value = obj.Values[idx].TextVal
-		case DBTypeBlob:
-			err = errors.New(fmt.Sprintf("Not converting blob to string for '%s' field", fieldName))
-		default:
-			err = errors.New(fmt.Sprintf("Unknown data type %d for '%s' field", obj.Fields[idx].IdDataType, fieldName))
-		}
-	}
-	if err != nil {
-		glog.Error(err)
-		if glog.V(1) {
-			glog.Info(obj)
-		}
-	}
-	return
-}
-
-// getByteVal : return []byte value for fieldName if possible else err
-func (obj HomeObject) getByteVal(fieldName string) (value []byte, err error) {
-	idx, err := obj.getFieldIndex(fieldName)
-	if err != nil {
-		return
-	}
-	if len(obj.Values) < idx {
-		err = errors.New(fmt.Sprintf("No value for '%s' field", fieldName))
-	} else {
-		switch obj.Fields[idx].IdDataType {
-		case DBTypeBool:
-			if obj.Values[idx].IntVal == 0 {
-				value = []byte("No")
-			} else {
-				value = []byte("Yes")
-			}
-		case DBTypeInt, DBTypeFloat, DBTypeDateTime:
-			value = []byte(fmt.Sprint(obj.Values[idx].IntVal))
-		case DBTypeText:
-			value = []byte(obj.Values[idx].TextVal)
-		case DBTypeBlob:
-			value = obj.Values[idx].ByteVal
 		default:
 			err = errors.New(fmt.Sprintf("Unknown data type %d for '%s' field", obj.Fields[idx].IdDataType, fieldName))
 		}
@@ -221,7 +162,7 @@ func getLinkedObjects(db *sql.DB, objs []HomeObject) (err error) {
 			return err
 		}
 		for _, linkedObjId := range lstLinkedObjId {
-			linkedObjs, err := getHomeObjects(db, ItemNone, -1, linkedObjId)
+			linkedObjs, err := getHomeObjects(db, ItemTypeNone, ItemIdNone, linkedObjId)
 			if err != nil {
 				return err
 			}
@@ -239,7 +180,7 @@ func getLinkedObjects(db *sql.DB, objs []HomeObject) (err error) {
 // If idObject > 0 return object with Id = idObject
 // Else if idItem > 0 return all objects for Item definition idItem
 // Else Return all objects for ItemType idItemType
-func getHomeObjects(db *sql.DB, idItemType itemType, idItem int, idObject int) (objs []HomeObject, err error) {
+func getHomeObjects(db *sql.DB, idItemType TItemType, idItem TItemId, idObject int) (objs []HomeObject, err error) {
 	if db == nil {
 		if db, err = openDB(); err != nil {
 			return
@@ -247,7 +188,7 @@ func getHomeObjects(db *sql.DB, idItemType itemType, idItem int, idObject int) (
 		defer db.Close()
 	}
 
-	if idItemType <= ItemNone {
+	if idItem > 0 || idObject > 0 {
 		var curObj HomeObject
 
 		// read fields
@@ -289,7 +230,7 @@ func getHomeObjects(db *sql.DB, idItemType itemType, idItem int, idObject int) (
 	} else {
 
 		// get all items for idItemType
-		items, err1 := getManageItems(db, idItemType, -1)
+		items, err1 := getManageItems(db, idItemType, ItemIdNone)
 		if err1 != nil {
 			err = err1
 			return
@@ -297,7 +238,7 @@ func getHomeObjects(db *sql.DB, idItemType itemType, idItem int, idObject int) (
 
 		// for each item, read objects
 		for _, item := range items {
-			lstObjs, err1 := getHomeObjects(db, ItemNone, item.IdItem, -1)
+			lstObjs, err1 := getHomeObjects(db, ItemTypeNone, item.IdItem, -1)
 			if err1 != nil {
 				err = err1
 				return
