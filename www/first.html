@@ -1,0 +1,89 @@
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+	<title>goHome</title>
+	<meta name="description" content="goHome">
+	<meta name="viewport" content="width=device-width">
+	<script src="js/jquery.min.js"></script>
+	<script src="js/jquery.json.min.js"></script>
+	<link rel="stylesheet" type="text/css" title="main" href="css/main.css">
+	<script>
+	$(document).ready(function(){
+		$("#json_go").click(function(){
+			var  cmde = {
+				command:$("#command").val(), 
+				itemtypeid:parseInt($("#itemtypeid").val()),
+				itemid:parseInt($("#itemid").val()),
+				objectid:parseInt($("#objectid").val()),
+				startts:parseInt($("#startts").val()),
+				endts:parseInt($("#endts").val()),
+				jsonparam:$("#jsonparam").val()
+				}
+			$.post("/api",
+			{
+				command:$.toJSON(cmde)
+			},
+			function(data, status){
+				var str = data.replace(/,{/g, ",<br>{");
+				str = str.replace(/],/g, "],<br>");
+				$("#json_result").html(str);
+			});
+		});
+		$("#json_reset").click(function(){
+			$("#json_result").html("<center> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; / &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; </center>");
+		});
+	});
+	</script>
+</head>
+</head>
+<body>
+<center>
+<h1>Welcome</h1>
+<table class="std">
+	<tr>
+		<td class="label">JSON </td>
+		<td>
+			<select id="command">
+				<option value="ReadItemTypes">ReadItemTypes</option>
+				<option value="ReadItems">ReadItems</option>
+				<option value="ReadObject">ReadObject</option>
+				<option value="ReadSensor">ReadSensor</option>
+				<option value="ReadHistoVal">ReadHistoVal</option>
+				<option value="ReadActorRes">ReadActorRes</option>
+				<option value="SaveItems">SaveItems</option>
+				<option value="SaveObject">SaveObject</option>
+				<option value="DeleteItems">DeleteItems</option>
+				<option value="DeleteObject">DeleteObject</option>
+				<option value="SendSensorVal">SendSensorVal</option>
+				<option value="TriggerActor">TriggerActor</option>
+			</select>
+		</td>
+		<td class="label">itemtypeid :</td><td><input id="itemtypeid" type="number" min="0" max="9999" value="0" /></td>
+	</tr><tr>
+		<td class="label">itemid :</td><td><input id="itemid" type="number" min="0" max="9999" value="0" /></td>
+		<td class="label">startts :</td><td><input id="startts" type="number" min="0" max="9999" value="0" /></td>
+	</tr><tr>
+		<td class="label">objectid :</td><td><input id="objectid" type="number" min="0" max="9999" value="0" /></td>
+		<td class="label">endts :</td><td><input id="endts" type="number" min="0" max="9999" value="0" /></td>
+	</tr><tr>
+		<td class="label">jsonparam</td><td colspan="3"><textarea id="jsonparam" class="jsonparam"  rows="15" cols="80"></textarea></td>
+	</tr><tr>
+		<td></td>
+		<td id="json_go" class="bouton">GO</td>
+		<td id="json_reset" class="bouton">Reset</td>
+		<td></td>
+	</tr>
+</table>
+<br>
+<table class="std">
+	<tr>
+		<td id="json_result" class="blackbox result" colspan="4">
+		<center> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; / &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; </center>
+		</td>
+	</tr>
+</table>
+</center>
+</body>
+</html>
+
+
