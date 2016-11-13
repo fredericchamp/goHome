@@ -4,9 +4,11 @@
 	<title>goHome</title>
 	<meta name="description" content="goHome">
 	<meta name="viewport" content="width=device-width">
-	<script src="js/jquery.min.js"></script>
-	<script src="js/jquery.json.min.js"></script>
 	<link rel="stylesheet" type="text/css" title="main" href="css/main.css">
+	<link rel="stylesheet" type="text/css" href="css/w2ui-1.5.rc1.min.css" />
+	<script type="text/javascript" src="js/jquery.min.js"></script>
+	<script type="text/javascript" src="js/jquery.json.min.js"></script>
+	<script type="text/javascript" src="js/w2ui-1.5.rc1.min.js"></script>
 	<script>
 	$(document).ready(function(){
 		$("#json_go").click(function(){
@@ -33,12 +35,57 @@
 			$("#json_result").html("<center> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; / &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; </center>");
 		});
 	});
+
+$(function () {
+    $('#toolbar').w2toolbar({
+        name: 'toolbar',
+        items: [
+            { type: 'check',  id: 'item1', caption: 'Check', icon: 'fa-check', checked: true },
+            { type: 'button',  id: 'itemA',  caption: 'Item A',  img: 'images/ic_home.png' },
+            { type: 'break',  id: 'break0' },
+            { type: 'menu',   id: 'item2', caption: 'Menu', icon: 'fa-table', count: 17, items: [
+                { text: 'Item 1', icon: 'fa-camera', count: 5 }, 
+                { text: 'Item 2', icon: 'fa-picture', disabled: true }, 
+                { text: 'Item 3', icon: 'fa-glass', count: 12 }
+            ]},
+            { type: 'break', id: 'break1' },
+            { type: 'radio',  id: 'item3',  group: '1', caption: 'Radio 1', icon: 'fa-star', checked: true },
+            { type: 'radio',  id: 'item4',  group: '1', caption: 'Radio 2', icon: 'fa-heart' },
+            { type: 'break', id: 'break2' },
+            { type: 'drop',  id: 'item5', caption: 'Drop Down', icon: 'fa-plus', html: '<div style="padding: 10px">Drop down</div>' },
+            { type: 'break', id: 'break3' },
+            { type: 'html',  id: 'item6',
+                html: '<div style="padding: 3px 10px;">'+
+                      ' Input:'+
+                      '    <input size="10" style="padding: 3px; border-radius: 2px; border: 1px solid silver"/>'+
+                      '</div>' 
+            },
+            { type: 'spacer' },
+            { type: 'button',  id: 'item7',  caption: 'Item 5', icon: 'fa-flag' }
+        ]
+    });
+    
+    w2ui.toolbar.on('*', function (event) { 
+        console.log('EVENT: '+ event.type + ' TARGET: '+ event.target, event);
+    });
+});
+
+
 	</script>
 </head>
 </head>
 <body>
 <center>
 <h1>Welcome</h1>
+
+
+<div id="toolbar" style="padding: 4px; border: 1px solid silver; border-radius: 3px"></div>
+
+<br><br><br><br><br>
+<img src='images/ic_home.png'>
+
+<br><br><br><br><br>
+
 <table class="std">
 	<tr>
 		<td class="label">JSON </td>

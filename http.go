@@ -235,7 +235,7 @@ func startHTTPS(chanExit chan bool) {
 	//-----------------------------
 	// Read global param from DB
 
-	fileServerRoot, err := getGlobalParam(db, -1, "Http", "fileserver_root")
+	fileServerRoot, err := getGlobalParam(db, "Http", "fileserver_root")
 	if err != nil {
 		chanExit <- true
 		return
@@ -244,13 +244,13 @@ func startHTTPS(chanExit chan bool) {
 		glog.Infof("FileServer root dir = '%s'", fileServerRoot)
 	}
 
-	serverName, err := getGlobalParam(db, -1, "Http", "server_name")
+	serverName, err := getGlobalParam(db, "Http", "server_name")
 	if err != nil {
 		glog.Errorf("Error in startHTTPS ... exiting : %s", err)
 		chanExit <- true
 		return
 	}
-	value, err := getGlobalParam(db, -1, "Http", "https_port")
+	value, err := getGlobalParam(db, "Http", "https_port")
 	if err != nil {
 		glog.Errorf("Error in startHTTPS ... exiting : %s", err)
 		chanExit <- true
@@ -263,19 +263,19 @@ func startHTTPS(chanExit chan bool) {
 		return
 	}
 
-	serverCrtFileName, err := getGlobalParam(db, -1, "Http", "server_crt")
+	serverCrtFileName, err := getGlobalParam(db, "Http", "server_crt")
 	if err != nil {
 		glog.Errorf("Error in startHTTPS ... exiting : %s", err)
 		chanExit <- true
 		return
 	}
-	serverKeyFileName, err := getGlobalParam(db, -1, "Http", "server_key")
+	serverKeyFileName, err := getGlobalParam(db, "Http", "server_key")
 	if err != nil {
 		glog.Errorf("Error in startHTTPS ... exiting : %s", err)
 		chanExit <- true
 		return
 	}
-	caCertFileName, err := getGlobalParam(db, -1, "Http", "ca_crt")
+	caCertFileName, err := getGlobalParam(db, "Http", "ca_crt")
 	if err != nil {
 		glog.Errorf("Error in startHTTPS ... exiting : %s", err)
 		chanExit <- true

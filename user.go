@@ -73,7 +73,7 @@ func loadUsers(db *sql.DB, force bool) (nbUser int, err error) {
 		return
 	}
 
-	value, err := getGlobalParam(db, -1, "Global", "UserItemId")
+	value, err := getGlobalParam(db, "Global", "UserItemId")
 	if err != nil {
 		return
 	}

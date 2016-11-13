@@ -19,7 +19,7 @@ const (
 	DBTypeFloat
 	DBTypeText
 	DBTypeDateTime
-	DBTypeFileName
+	DBTypeURL
 )
 
 var dbTypeNames = map[TDataType]string{
@@ -28,7 +28,7 @@ var dbTypeNames = map[TDataType]string{
 	DBTypeFloat:    "Float",
 	DBTypeText:     "Text",
 	DBTypeDateTime: "DateTime",
-	DBTypeFileName: "FileName",
+	DBTypeURL:      "URL",
 }
 
 // -----------------------------------------------
@@ -83,13 +83,11 @@ func (obj HomeObject) getIntVal(fieldName string) (value int, err error) {
 		err = errors.New(fmt.Sprintf("No value for '%s' field", fieldName))
 	} else {
 		switch obj.Fields[idx].IdDataType {
-		case DBTypeBool, DBTypeInt, DBTypeDateTime:
-			value = obj.Values[idx].IntVal
-		case DBTypeText:
-			value, err = strconv.Atoi(obj.Values[idx].TextVal)
+		case DBTypeBool, DBTypeInt, DBTypeDateTime, DBTypeText:
+			value, err = strconv.Atoi(obj.Values[idx].Val)
 		case DBTypeFloat:
 			err = errors.New(fmt.Sprintf("Not converting float to int for '%s' field", fieldName))
-		case DBTypeFileName:
+		case DBTypeURL:
 			err = errors.New(fmt.Sprintf("Not converting filename to int for '%s' field", fieldName))
 		default:
 			err = errors.New(fmt.Sprintf("Unknown data type %d for '%s' field", obj.Fields[idx].IdDataType, fieldName))
@@ -115,17 +113,15 @@ func (obj HomeObject) getStrVal(fieldName string) (value string, err error) {
 	} else {
 		switch obj.Fields[idx].IdDataType {
 		case DBTypeBool:
-			if obj.Values[idx].IntVal == 0 {
+			if obj.Values[idx].Val == "0" {
 				value = "No"
 			} else {
 				value = "Yes"
 			}
-		case DBTypeInt, DBTypeDateTime:
-			value = fmt.Sprint(obj.Values[idx].IntVal)
-		case DBTypeFloat:
-			value = fmt.Sprint(obj.Values[idx].FloatVal)
-		case DBTypeText, DBTypeFileName:
-			value = obj.Values[idx].TextVal
+		case DBTypeInt, DBTypeDateTime, DBTypeFloat:
+			value = fmt.Sprint(obj.Values[idx].Val)
+		case DBTypeText, DBTypeURL:
+			value = obj.Values[idx].Val
 		default:
 			err = errors.New(fmt.Sprintf("Unknown data type %d for '%s' field", obj.Fields[idx].IdDataType, fieldName))
 		}
@@ -156,7 +152,7 @@ func getLinkedObjects(db *sql.DB, objs []HomeObject) (err error) {
 		defer db.Close()
 	}
 
-	for i, _ := range objs {
+	for i := range objs {
 		lstLinkedObjId, err := getLinkedObjIds(db, objs[i].getId())
 		if err != nil {
 			return err

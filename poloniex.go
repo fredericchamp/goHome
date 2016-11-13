@@ -90,10 +90,10 @@ func GetPoloTicker(param1 string, param2 string) (result string, err error) {
 		return
 	}
 
-	if glog.V(1) {
-		glog.Infof("GetPoloTicker (%s) (%s) = %s", param1, param2, oneTicker.Last)
-	}
 	result = oneTicker.Last
+	if glog.V(1) {
+		glog.Infof("GetPoloTicker (%s) (%s) = %s", param1, param2, result)
+	}
 
 	return
 }
@@ -243,6 +243,10 @@ func GetPoloBalance(param1 string, param2 string) (result string, err error) {
 	}
 
 	result = fmt.Sprintf("%.8f", total)
+
+	if glog.V(1) {
+		glog.Infof("GetPoloBalance = %s", result)
+	}
 
 	return
 }

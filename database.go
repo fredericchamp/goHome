@@ -60,24 +60,19 @@ type ItemField struct {
 	NOrder     int
 	Name       string
 	IdDataType TDataType
-	Helper     string
 	Rules      string
 }
 
 type ItemFieldVal struct {
 	IdObject int
 	IdField  int
-	IntVal   int
-	FloatVal float32
-	TextVal  string
+	Val      string
 }
 
 type HistoSensor struct {
 	Ts       time.Time
 	IdObject int
-	IntVal   int
-	FloatVal float32
-	TextVal  string
+	Val      string
 }
 
 type HistoActor struct {
@@ -85,7 +80,7 @@ type HistoActor struct {
 	IdObject int
 	IdUser   int
 	Param    string
-	Result   string
+	Res      string
 }
 
 // -----------------------------------------------
@@ -100,8 +95,10 @@ func execSqlStmtsFromFile(db *sql.DB, fileName string) (err error) {
 	}
 	defer initFile.Close()
 
+	lg := 0
 	scanner := bufio.NewScanner(initFile)
 	for scanner.Scan() {
+		lg++
 		sqlStmt := strings.TrimSpace(scanner.Text())
 
 		if len(sqlStmt) == 0 || strings.HasPrefix(sqlStmt, "--") {
@@ -110,7 +107,7 @@ func execSqlStmtsFromFile(db *sql.DB, fileName string) (err error) {
 
 		_, err = db.Exec(sqlStmt)
 		if err != nil {
-			glog.Errorf("File %s : Error excuting sqlStmt (%s) : %s\n", fileName, sqlStmt, err)
+			glog.Errorf("File %s:%d : Error excuting sqlStmt (%s) : %s\n", fileName, lg, sqlStmt, err)
 			return
 		}
 	}
@@ -178,10 +175,9 @@ func openDB() (db *sql.DB, err error) {
 
 // -----------------------------------------------
 
-// getGlobalParam : fetch param value from db table goHome
-// if id > 0 query db using this id (ignoring perimeter and name parameter) else query using perimeter and name
-// If multiple rows received only the first is read
-func getGlobalParam(db *sql.DB, idParam int, perimeter string, name string) (value string, err error) {
+// getGlobalParam : fetch param value from db table goHome perimeter and name
+// If multiple rows received only the first is read ... should necer append given unique index on table
+func getGlobalParam(db *sql.DB, perimeter string, name string) (value string, err error) {
 	if db == nil {
 		if db, err = openDB(); err != nil {
 			return
@@ -189,15 +185,9 @@ func getGlobalParam(db *sql.DB, idParam int, perimeter string, name string) (val
 		defer db.Close()
 	}
 
-	var rows *sql.Rows
-
-	if idParam > 0 {
-		rows, err = db.Query("select value from goHome where idParam = ?", idParam)
-	} else {
-		rows, err = db.Query("select value from goHome where perimeter = ? and name = ?", perimeter, name)
-	}
+	rows, err := db.Query("select val from goHome where perimeter = ? and name = ?", perimeter, name)
 	if err != nil {
-		glog.Errorf("getGlobalParam query fail (id=%d,perimeter=%s,name=%s) : %s ", idParam, perimeter, name, err)
+		glog.Errorf("getGlobalParam query fail (perimeter=%s,name=%s) : %s ", perimeter, name, err)
 		return
 	}
 	defer rows.Close()
@@ -205,20 +195,18 @@ func getGlobalParam(db *sql.DB, idParam int, perimeter string, name string) (val
 	rows.Next()
 	err = rows.Scan(&value)
 	if err != nil {
-		glog.Errorf("getGlobalParam scam fail  (id=%d,perimeter=%s,name=%s) : %s ", idParam, perimeter, name, err)
+		glog.Errorf("getGlobalParam scam fail  (perimeter=%s,name=%s) : %s ", perimeter, name, err)
 		return
 	}
 
 	if err = rows.Err(); err != nil {
-		glog.Errorf("getGlobalParam rows.Err  (id=%d,perimeter=%s,name=%s) : %s ", idParam, perimeter, name, err)
+		glog.Errorf("getGlobalParam rows.Err  (perimeter=%s,name=%s) : %s ", perimeter, name, err)
 		return
 	}
 	return
 }
 
-// getGlobalParam : fetch param value from db table goHome
-// if id > 0 query db using this id (ignoring perimeter and name parameter) else query using perimeter and name
-// If multiple rows received only the first is read
+// getGlobalParam : fetch all param names/values from db table goHome for a given perimeter
 func getGlobalParamList(db *sql.DB, perimeter string) (valMap map[string]string, err error) {
 	if db == nil {
 		if db, err = openDB(); err != nil {
@@ -229,7 +217,7 @@ func getGlobalParamList(db *sql.DB, perimeter string) (valMap map[string]string,
 
 	valMap = make(map[string]string)
 
-	rows, err := db.Query("select name, value from goHome where perimeter = ?", perimeter)
+	rows, err := db.Query("select name, val from goHome where perimeter = ?", perimeter)
 	if err != nil {
 		glog.Errorf("getGlobalParamList query fail (perimeter=%s) : %s ", perimeter, err)
 		return
@@ -325,11 +313,11 @@ func getItemFields(db *sql.DB, idItem TItemId, idObject int) (fields []ItemField
 
 	switch {
 	case idObject > 0:
-		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Helper, f.Rules from ItemField f, ItemFieldVal v where f.idField = v.idField and v.idObject = ? order by nOrder", idObject)
+		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Rules from ItemField f, ItemFieldVal v where f.idField = v.idField and v.idObject = ? order by f.nOrder", idObject)
 	case idItem > 0:
-		rows, err = db.Query("select idField, idItem, nOrder, Name, idDataType, Helper, Rules from ItemField where idItem = ? order by nOrder", idItem)
+		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Rules from ItemField f where f.idItem = ? order by f.nOrder", idItem)
 	default:
-		rows, err = db.Query("select idField, idItem, nOrder, Name, idDataType, Helper, Rules from ItemField order by idItem, nOrder")
+		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Rules from ItemField f order by f.idItem, f.nOrder")
 	}
 	if err != nil {
 		glog.Errorf("getItemFields query fail (item=%d,obj=%d) : %s ", idItem, idObject, err)
@@ -338,7 +326,7 @@ func getItemFields(db *sql.DB, idItem TItemId, idObject int) (fields []ItemField
 	defer rows.Close()
 
 	for rows.Next() {
-		err = rows.Scan(&curField.IdField, &curField.IdItem, &curField.NOrder, &curField.Name, &curField.IdDataType, &curField.Helper, &curField.Rules)
+		err = rows.Scan(&curField.IdField, &curField.IdItem, &curField.NOrder, &curField.Name, &curField.IdDataType, &curField.Rules)
 		if err != nil {
 			glog.Errorf("getItemFields scan fail (item=%d,obj=%d) : %s ", idItem, idObject, err)
 			return
@@ -378,9 +366,9 @@ func getItemFieldValues(db *sql.DB, idItem TItemId, idObject int) (values []Item
 
 	switch {
 	case idObject > 0:
-		rows, err = db.Query("select v.idObject, v.idField, v.intVal, v.floatVal, v.textVal from ItemFieldVal v, ItemField f where v.idField = f.idField and v.idObject = ? order by v.idObject, f.NOrder", idObject)
+		rows, err = db.Query("select v.idObject, v.idField, v.Val from ItemFieldVal v, ItemField f where v.idField = f.idField and v.idObject = ? order by v.idObject, f.NOrder", idObject)
 	case idItem > 0:
-		rows, err = db.Query("select v.idObject, v.idField, v.intVal, v.floatVal, v.textVal from ItemFieldVal v, ItemField f where v.idField = f.idField and f.idItem = ? order by v.idObject, f.NOrder", idItem)
+		rows, err = db.Query("select v.idObject, v.idField, v.Val from ItemFieldVal v, ItemField f where v.idField = f.idField and f.idItem = ? order by v.idObject, f.NOrder", idItem)
 	default:
 		err = errors.New(fmt.Sprintf("getItemFieldValues (idItem=%d idObject=%d) ... wont read all ItemFieldVal from db", idItem, idObject))
 	}
@@ -391,7 +379,7 @@ func getItemFieldValues(db *sql.DB, idItem TItemId, idObject int) (values []Item
 	defer rows.Close()
 
 	for rows.Next() {
-		err = rows.Scan(&curVal.IdObject, &curVal.IdField, &curVal.IntVal, &curVal.FloatVal, &curVal.TextVal)
+		err = rows.Scan(&curVal.IdObject, &curVal.IdField, &curVal.Val)
 		if err != nil {
 			glog.Errorf("getItemFieldValues scan fail (item=%d,obj=%d) : %s ", idItem, idObject, err)
 			return
@@ -415,7 +403,7 @@ func getLinkedObjIds(db *sql.DB, idObject int) (lstId []int, err error) {
 		defer db.Close()
 	}
 
-	rows, err := db.Query("select v.idObject from ItemFieldVal v, ItemField f where v.idField = f.idField and f.Name = 'idMasterObj' and v.intVal = ? order by v.idObject", idObject)
+	rows, err := db.Query("select v.idObject from ItemFieldVal v, ItemField f where v.idField = f.idField and f.Name = 'idMasterObj' and v.Val = ? order by v.idObject", fmt.Sprint(idObject))
 	if err != nil {
 		glog.Errorf("getLinkedObjIds query fail (obj=%d) : %s ", idObject, err)
 		return
@@ -456,12 +444,12 @@ func getHistoSensor(db *sql.DB, idObject int, last bool, startTS time.Time, endT
 	var rows *sql.Rows
 
 	if last {
-		rows, err = db.Query("select h.ts, h.idObject, h.intVal, h.floatVal, h.textVal from HistoSensor h where h.idObject = ? group by h.idObject having h.ts = max(h.ts)", idObject)
+		rows, err = db.Query("select h.ts, h.idObject, h.Val from HistoSensor h where h.idObject = ? group by h.idObject having h.ts = max(h.ts)", idObject)
 	} else {
 		if endTS.Before(time.Date(2016, time.January, 1, 0, 0, 0, 0, time.Local)) {
 			endTS = time.Now()
 		}
-		rows, err = db.Query("select h.ts, h.idObject, h.intVal, h.floatVal, h.textVal from HistoSensor h where h.idObject = ? and h.ts between ? and ? order by h.ts", idObject, startTS.Unix(), endTS.Unix())
+		rows, err = db.Query("select h.ts, h.idObject, h.Val from HistoSensor h where h.idObject = ? and h.ts between ? and ? order by h.ts", idObject, startTS.Unix(), endTS.Unix())
 	}
 	if err != nil {
 		glog.Errorf("getHistoSensor query fail (obj=%d,last=%d,start=%s,end=%s) : %s ", idObject, last, startTS, endTS, err)
@@ -471,7 +459,7 @@ func getHistoSensor(db *sql.DB, idObject int, last bool, startTS time.Time, endT
 
 	for rows.Next() {
 		var curVal HistoSensor
-		err = rows.Scan(&curVal.Ts, &curVal.IdObject, &curVal.IntVal, &curVal.FloatVal, &curVal.TextVal)
+		err = rows.Scan(&curVal.Ts, &curVal.IdObject, &curVal.Val)
 		if err != nil {
 			glog.Errorf("getHistoSensor scan fail (obj=%d,last=%d,start=%s,end=%s) : %s ", idObject, last, startTS, endTS, err)
 			return
@@ -503,12 +491,12 @@ func getHistActor(db *sql.DB, idObject int, last bool, startTS time.Time, endTS 
 	var rows *sql.Rows
 
 	if last {
-		rows, err = db.Query("select h.ts, h.idObject, h.idUser, h.Param, h.Result from HistoActor h where h.idObject = ? group by h.idObject having h.ts = max(h.ts)", idObject)
+		rows, err = db.Query("select h.ts, h.idObject, h.idUser, h.Param, h.Res from HistoActor h where h.idObject = ? group by h.idObject having h.ts = max(h.ts)", idObject)
 	} else {
 		if endTS.Before(time.Date(2016, time.January, 1, 0, 0, 0, 0, time.Local)) {
 			endTS = time.Now()
 		}
-		rows, err = db.Query("select h.ts, h.idObject, h.idUser, h.Param, h.Result from HistoActor h where h.idObject = ? and h.ts between ? and ? order by h.ts", idObject, startTS.Unix(), endTS.Unix())
+		rows, err = db.Query("select h.ts, h.idObject, h.idUser, h.Param, h.Res from HistoActor h where h.idObject = ? and h.ts between ? and ? order by h.ts", idObject, startTS.Unix(), endTS.Unix())
 	}
 	if err != nil {
 		glog.Errorf("getHistActor query fail (obj=%d,last=%d,start=%s,end=%s) : %s ", idObject, last, startTS, endTS, err)
@@ -518,7 +506,7 @@ func getHistActor(db *sql.DB, idObject int, last bool, startTS time.Time, endTS 
 
 	for rows.Next() {
 		var curVal HistoActor
-		err = rows.Scan(&curVal.Ts, &curVal.IdObject, &curVal.IdUser, &curVal.Param, &curVal.Result)
+		err = rows.Scan(&curVal.Ts, &curVal.IdObject, &curVal.IdUser, &curVal.Param, &curVal.Res)
 		if err != nil {
 			glog.Errorf("getHistActor scan fail (obj=%d,last=%d,start=%s,end=%s) : %s ", idObject, last, startTS, endTS, err)
 			return
@@ -580,7 +568,7 @@ func writeItemFieldValues(db *sql.DB, values []ItemFieldVal) (objectid int, err 
 		}
 	}
 
-	stmt, err := tx.Prepare("insert into ItemFieldVal (idObject, idField, intVal, floatVal, textVal) values(?, ?, ?, ?, ?)")
+	stmt, err := tx.Prepare("insert into ItemFieldVal (idObject, idField, Val) values(?, ?, ?)")
 	if err != nil {
 		glog.Errorf("writeItemFieldValues fail to prepare insert into ItemFieldVal : %s", err)
 		tx.Rollback()
@@ -589,7 +577,7 @@ func writeItemFieldValues(db *sql.DB, values []ItemFieldVal) (objectid int, err 
 	defer stmt.Close()
 
 	for _, val := range values {
-		_, err = stmt.Exec(objectid, val.IdField, val.IntVal, val.FloatVal, val.TextVal)
+		_, err = stmt.Exec(objectid, val.IdField, val.Val)
 		if err != nil {
 			glog.Errorf("writeItemFieldValues fail to exec insert into ItemFieldVal (objId=%d, %v) : %s", objectid, val, err)
 			tx.Rollback()

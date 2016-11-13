@@ -204,26 +204,27 @@ func recordSensorValue(t time.Time, sensor HomeObject, value string) {
 		return
 	}
 
+	// check value regarding datatype
 	switch TDataType(dataType) {
 	case DBTypeBool, DBTypeInt, DBTypeDateTime:
-		intVal, err := strconv.Atoi(value)
+		_, err := strconv.Atoi(value)
 		if err != nil {
 			glog.Errorf("Fail to get int(%s) for sensor %d : %s", value, sensorId, err)
 			return
 		}
-		_, err = db.Exec("insert into HistoSensor values ( ?, ?, ?, ?, ?);", t.Unix(), sensorId, intVal, 0, "")
 	case DBTypeText:
-		_, err = db.Exec("insert into HistoSensor values ( ?, ?, ?, ?, ?);", t.Unix(), sensorId, 0, 0, value)
 	case DBTypeFloat:
-		floatVal, err := strconv.ParseFloat(value, 64)
+		_, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			glog.Errorf("Fail to get float64(%s) for sensor %d : %s", value, sensorId, err)
 			return
 		}
-		_, err = db.Exec("insert into HistoSensor values ( ?, ?, ?, ?, ?);", t.Unix(), sensorId, 0, floatVal, "")
 	default:
 		glog.Errorf("Unknown data type %d for sensor %d", dataType, sensorId)
+		return
 	}
+
+	_, err = db.Exec("insert into HistoSensor values ( ?, ?, ?);", t.Unix(), sensorId, value)
 	if err != nil {
 		glog.Errorf("Fail to store %d value (%s) for sensor %d : %s ", dataType, value, sensorId, err)
 	}

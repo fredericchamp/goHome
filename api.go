@@ -255,7 +255,7 @@ func fctApiSaveObject(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []b
 	}
 
 	// if user => reload user list : loadUsers(nil, tue)
-	if strIdItemUser, err := getGlobalParam(nil, -1, "Global", "UserItemId"); err != nil {
+	if strIdItemUser, err := getGlobalParam(nil, "Global", "UserItemId"); err != nil {
 		apiResp = apiError(fmt.Sprintf("fctApiSaveObject : get UserItemId fail : %s", err))
 		return
 	} else {
