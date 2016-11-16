@@ -127,6 +127,13 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, `{"ItemEntity":1,"ItemSensor":2,"ItemActor":3,"ItemSensorAct":4,"ItemStreamSensor":5}`)
 		return
 
+	case apiReadCurrentUser:
+		if glog.V(1) {
+			glog.Infof("%s (user objectid=%d)", jsonCmde.Command, userObj.Values[0].IdObject)
+		}
+		w.Write(apiObjectResponse(profil, userObj))
+		return
+
 	case apiReadItem:
 		if glog.V(1) {
 			glog.Infof("%s (type=%d, item=%d)", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid)

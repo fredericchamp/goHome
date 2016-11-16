@@ -14,22 +14,14 @@ import (
 type TDataType int
 
 const (
-	DBTypeBool TDataType = 1 + iota
+	DBTypeNone TDataType = iota
+	DBTypeBool
 	DBTypeInt
 	DBTypeFloat
 	DBTypeText
 	DBTypeDateTime
 	DBTypeURL
 )
-
-var dbTypeNames = map[TDataType]string{
-	DBTypeBool:     "Boolean",
-	DBTypeInt:      "Integer",
-	DBTypeFloat:    "Float",
-	DBTypeText:     "Text",
-	DBTypeDateTime: "DateTime",
-	DBTypeURL:      "URL",
-}
 
 // -----------------------------------------------
 

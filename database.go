@@ -31,17 +31,8 @@ const (
 	ItemSensor
 	ItemActor
 	ItemSensorAct
-	ItemImageSensor // TODO
+	ItemImageSensor
 )
-
-var itemTypeNames = map[TItemType]string{
-	ItemTypeNone:    "None",
-	ItemEntity:      "Entity",
-	ItemSensor:      "Sensor",
-	ItemActor:       "Actor",
-	ItemSensorAct:   "Actor trigger by sensor",
-	ItemImageSensor: "Image Sensor",
-}
 
 const ItemIdNone TItemId = 0
 

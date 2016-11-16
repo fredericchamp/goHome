@@ -18,18 +18,19 @@ import (
 type apiCommand string
 
 const (
-	apiReadItemType  apiCommand = "ReadItemTypes"
-	apiReadItem                 = "ReadItems"
-	apiReadObject               = "ReadObject"
-	apiReadSensor               = "ReadSensor"
-	apiReadHistoVal             = "ReadHistoVal"
-	apiReadActorRes             = "ReadActorRes"
-	apiSaveItem                 = "SaveItems"
-	apiSaveObject               = "SaveObject"
-	apiDeleteItem               = "DeleteItems"
-	apiDeleteObject             = "DeleteObject"
-	apiSendSensorVal            = "SendSensorVal"
-	apiTriggerActor             = "TriggerActor"
+	apiReadCurrentUser apiCommand = "ReadCurrentUser"
+	apiReadItemType               = "ReadItemTypes"
+	apiReadItem                   = "ReadItems"
+	apiReadObject                 = "ReadObject"
+	apiReadSensor                 = "ReadSensor"
+	apiReadHistoVal               = "ReadHistoVal"
+	apiReadActorRes               = "ReadActorRes"
+	apiSaveItem                   = "SaveItems"
+	apiSaveObject                 = "SaveObject"
+	apiDeleteItem                 = "DeleteItems"
+	apiDeleteObject               = "DeleteObject"
+	apiSendSensorVal              = "SendSensorVal"
+	apiTriggerActor               = "TriggerActor"
 )
 
 type apiCommandSruct struct {
@@ -44,10 +45,10 @@ type apiCommandSruct struct {
 
 // -----------------------------------------------
 
-func apiResponse(msgName string, errMsg string) (apiResp []byte) {
-	jsonMsg, err := json.Marshal(errMsg)
+func apiResponse(msgName string, msgText string) (apiResp []byte) {
+	jsonMsg, err := json.Marshal(msgText)
 	if err != nil {
-		glog.Errorf("json.Marshal Failed for response message '%s'", errMsg)
+		glog.Errorf("json.Marshal Failed for response message '%s'", msgText)
 		apiResp = apiError("Error (json.Marshal Failed for response message)")
 	}
 	apiResp = []byte(fmt.Sprintf(`{"%s":"%s"}`, msgName, jsonMsg))
@@ -56,11 +57,19 @@ func apiResponse(msgName string, errMsg string) (apiResp []byte) {
 
 func apiError(errMsg string) (apiResp []byte) {
 	apiResp = apiResponse("error", errMsg)
-	//	apiResp, err := json.Marshal(struct{ Error string }{errMsg})
-	//	if err != nil {
-	//		glog.Errorf("json.Marshal Failed for error message '%s'", errMsg)
-	//		apiResp = []byte(`{"error":"Error (json.Marshal Failed for error message)"}`)
-	//	}
+	return
+}
+
+func apiObjectResponse(profil TUserProfil, obj HomeObject) (apiResp []byte) {
+	if err := checkAccessToObject(profil, obj); err != nil {
+		apiResp = apiError(fmt.Sprintf("apiObjectResponse failed : %s", err))
+		return
+	}
+	apiResp, err := json.Marshal(obj)
+	if err != nil {
+		apiResp = apiError(fmt.Sprintf("apiObjectResponse failed : %s", err))
+		return
+	}
 	return
 }
 
