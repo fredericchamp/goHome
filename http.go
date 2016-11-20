@@ -1,4 +1,4 @@
-// main.go
+// http.go
 package main
 
 import (
@@ -120,11 +120,18 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch jsonCmde.Command {
 
-	case apiReadItemType:
+	case apiReadItemType: // TODO : remove, replace by apiReadRefList("ItemType")
 		if glog.V(1) {
 			glog.Info(jsonCmde.Command)
 		}
 		fmt.Fprint(w, `{"ItemEntity":1,"ItemSensor":2,"ItemActor":3,"ItemSensorAct":4,"ItemStreamSensor":5}`)
+		return
+
+	case apiReadRefList:
+		if glog.V(1) {
+			glog.Infof("%s (name=%s)", jsonCmde.Command, jsonCmde.Jsonparam)
+		}
+		w.Write(fctApiRefList(profil, jsonCmde))
 		return
 
 	case apiReadCurrentUser:

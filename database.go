@@ -21,6 +21,12 @@ var dbFileName = ":memory:"
 
 // -----------------------------------------------
 
+type RefValue struct {
+	Name  string
+	Code  string
+	Label string
+}
+
 type TItemType int
 
 type TItemId int
@@ -51,7 +57,11 @@ type ItemField struct {
 	NOrder     int
 	Name       string
 	IdDataType TDataType
-	Rules      string
+	Label      string
+	Helper     string
+	Uniq       int
+	RefList    string
+	Regexp     string
 }
 
 type ItemFieldVal struct {
@@ -165,6 +175,45 @@ func openDB() (db *sql.DB, err error) {
 }
 
 // -----------------------------------------------
+
+//  getRefList Read a reference list from DB and return it
+func getRefList(db *sql.DB, listname string) (list []RefValue, err error) {
+	if db == nil {
+		if db, err = openDB(); err != nil {
+			return
+		}
+		defer db.Close()
+	}
+
+	rows, err := db.Query("select name, code, label from RefValues where name like ? order by name, code", listname)
+	if err != nil {
+		glog.Errorf("getRefList query fail (name=%s) : %s ", listname, err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var curVal RefValue
+		err = rows.Scan(&curVal.Name, &curVal.Code, &curVal.Label)
+		if err != nil {
+			glog.Errorf("getRefList scan fail (name=%s) : %s ", listname, err)
+			return
+		}
+		list = append(list, curVal)
+	}
+	if err = rows.Err(); err != nil {
+		glog.Errorf("getRefList rows.Err (name=%s) : %s ", listname, err)
+		return
+	}
+
+	if len(list) <= 0 {
+		err = errors.New(fmt.Sprintf("Ref values not found (name=%s)", listname))
+		glog.Errorf("getRefList %s ", err)
+		return
+	}
+
+	return
+}
 
 // getGlobalParam : fetch param value from db table goHome perimeter and name
 // If multiple rows received only the first is read ... should necer append given unique index on table
@@ -304,11 +353,11 @@ func getItemFields(db *sql.DB, idItem TItemId, idObject int) (fields []ItemField
 
 	switch {
 	case idObject > 0:
-		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Rules from ItemField f, ItemFieldVal v where f.idField = v.idField and v.idObject = ? order by f.nOrder", idObject)
+		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Label, f.Helper, f.Uniq, f.RefList, f.Regexp from ItemField f, ItemFieldVal v where f.idField = v.idField and v.idObject = ? order by f.nOrder", idObject)
 	case idItem > 0:
-		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Rules from ItemField f where f.idItem = ? order by f.nOrder", idItem)
+		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Label, f.Helper, f.Uniq, f.RefList, f.Regexp from ItemField f where f.idItem = ? order by f.nOrder", idItem)
 	default:
-		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Rules from ItemField f order by f.idItem, f.nOrder")
+		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Label, f.Helper, f.Uniq, f.RefList, f.Regexp from ItemField f order by f.idItem, f.nOrder")
 	}
 	if err != nil {
 		glog.Errorf("getItemFields query fail (item=%d,obj=%d) : %s ", idItem, idObject, err)
@@ -317,7 +366,8 @@ func getItemFields(db *sql.DB, idItem TItemId, idObject int) (fields []ItemField
 	defer rows.Close()
 
 	for rows.Next() {
-		err = rows.Scan(&curField.IdField, &curField.IdItem, &curField.NOrder, &curField.Name, &curField.IdDataType, &curField.Rules)
+		err = rows.Scan(&curField.IdField, &curField.IdItem, &curField.NOrder, &curField.Name, &curField.IdDataType,
+			&curField.Label, &curField.Helper, &curField.Uniq, &curField.RefList, &curField.Regexp)
 		if err != nil {
 			glog.Errorf("getItemFields scan fail (item=%d,obj=%d) : %s ", idItem, idObject, err)
 			return

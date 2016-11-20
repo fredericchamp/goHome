@@ -20,7 +20,6 @@ const (
 	DBTypeFloat
 	DBTypeText
 	DBTypeDateTime
-	DBTypeURL
 )
 
 // -----------------------------------------------
@@ -79,8 +78,6 @@ func (obj HomeObject) getIntVal(fieldName string) (value int, err error) {
 			value, err = strconv.Atoi(obj.Values[idx].Val)
 		case DBTypeFloat:
 			err = errors.New(fmt.Sprintf("Not converting float to int for '%s' field", fieldName))
-		case DBTypeURL:
-			err = errors.New(fmt.Sprintf("Not converting filename to int for '%s' field", fieldName))
 		default:
 			err = errors.New(fmt.Sprintf("Unknown data type %d for '%s' field", obj.Fields[idx].IdDataType, fieldName))
 		}
@@ -112,7 +109,7 @@ func (obj HomeObject) getStrVal(fieldName string) (value string, err error) {
 			}
 		case DBTypeInt, DBTypeDateTime, DBTypeFloat:
 			value = fmt.Sprint(obj.Values[idx].Val)
-		case DBTypeText, DBTypeURL:
+		case DBTypeText:
 			value = obj.Values[idx].Val
 		default:
 			err = errors.New(fmt.Sprintf("Unknown data type %d for '%s' field", obj.Fields[idx].IdDataType, fieldName))

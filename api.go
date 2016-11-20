@@ -1,4 +1,4 @@
-// user.go
+// api.go
 package main
 
 import (
@@ -18,8 +18,9 @@ import (
 type apiCommand string
 
 const (
-	apiReadCurrentUser apiCommand = "ReadCurrentUser"
-	apiReadItemType               = "ReadItemTypes"
+	apiReadItemType    apiCommand = "ReadItemTypes"
+	apiReadRefList                = "ReadRefList"
+	apiReadCurrentUser            = "ReadCurrentUser"
 	apiReadItem                   = "ReadItems"
 	apiReadObject                 = "ReadObject"
 	apiReadSensor                 = "ReadSensor"
@@ -51,7 +52,7 @@ func apiResponse(msgName string, msgText string) (apiResp []byte) {
 		glog.Errorf("json.Marshal Failed for response message '%s'", msgText)
 		apiResp = apiError("Error (json.Marshal Failed for response message)")
 	}
-	apiResp = []byte(fmt.Sprintf(`{"%s":"%s"}`, msgName, jsonMsg))
+	apiResp = []byte(fmt.Sprintf(`{"%s":%s}`, msgName, jsonMsg))
 	return
 }
 
@@ -68,6 +69,21 @@ func apiObjectResponse(profil TUserProfil, obj HomeObject) (apiResp []byte) {
 	apiResp, err := json.Marshal(obj)
 	if err != nil {
 		apiResp = apiError(fmt.Sprintf("apiObjectResponse failed : %s", err))
+		return
+	}
+	return
+}
+
+func fctApiRefList(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []byte) {
+	list, err := getRefList(nil, jsonCmde.Jsonparam)
+	if err != nil {
+		apiResp = apiError(fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, jsonCmde.Jsonparam, err))
+		return
+	}
+
+	apiResp, err = json.Marshal(list)
+	if err != nil {
+		apiResp = apiError(fmt.Sprintf("%s failed for (type=%d, item=%d) : %s", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, err))
 		return
 	}
 	return
@@ -127,7 +143,7 @@ func fctApiReadSensor(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []b
 		return
 	}
 
-	apiResp, err = json.Marshal(value)
+	apiResp, err = json.Marshal(HistoSensor{time.Now(), jsonCmde.Objectid, value})
 	if err != nil {
 		apiResp = apiError(fmt.Sprintf("%s failed for (obj=%d) : %s", jsonCmde.Command, jsonCmde.Objectid, err))
 		return
