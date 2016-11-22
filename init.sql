@@ -30,6 +30,18 @@ create table RefValues (name text not null, code text not null, label text);
 create unique index RefValues_PK1 on RefValues (name, code);
 create unique index RefValues_PK2 on RefValues (name, label);
 
+
+insert into goHome values    ( 'Global', 'Version',         '0.1');
+insert into goHome values    ( 'Global', 'Email',           'admin@goHomeDomain.net');
+insert into goHome values    ( 'Global', 'UserItemId',      '1');
+insert into goHome values    ( 'Http',   'server_name',     'localhost');
+insert into goHome values    ( 'Http',   'https_port',      '5100');
+insert into goHome values    ( 'Http',   'server_crt',      '/var/goHome/certificats/server.crt.pem');
+insert into goHome values    ( 'Http',   'server_key',      '/var/goHome/certificats/server.key.pem');
+insert into goHome values    ( 'Http',   'ca_crt',          '/var/goHome/certificats/goHomeCAcert.pem');
+insert into goHome values    ( 'Http',   'fileserver_root', '/var/goHome/www');
+
+
 -- YN				[{id:1,label:"Yes"},{id:0,label:"No"}]
 insert into RefValues values ('YN', '0', 'No');
 insert into RefValues values ('YN', '1', 'Yes');
@@ -40,7 +52,6 @@ insert into RefValues values ('ItemType', '3', 'Actor');
 insert into RefValues values ('ItemType', '4', 'Actor trigger by sensor');
 insert into RefValues values ('ItemType', '5', 'Image Sensor');
 -- UserProfil		[{id:1,label:"Administrator"},{id:2,label:"User"}]
-insert into RefValues values ('UserProfil', '0', 'Profil None');
 insert into RefValues values ('UserProfil', '1', 'Administrator');
 insert into RefValues values ('UserProfil', '2', 'User');
 -- DataType		[{id:1,label:"Bool"},{id:2,label:"Int"},{id:3,label:"Float"},{id:4,label:"Text"},{id:5,label:"DateTime"}], ............... ajouter un type JSON ?
@@ -49,18 +60,6 @@ insert into RefValues values ('DataType', '2', 'Int');
 insert into RefValues values ('DataType', '3', 'Float');
 insert into RefValues values ('DataType', '4', 'Text');
 insert into RefValues values ('DataType', '5', 'DateTime');
--- email			^[[:alnum:].\-_]*@[[:alnum:].\-_]*[.][[:alpha:]]{2,}$
-insert into RefValues values ('email', '-1', '^[[:alnum:].\-_]*@[[:alnum:].\-_]*[.][[:alpha:]]{2,}$');
--- url				juste exclure les car speciaux ?
-insert into RefValues values ('url', '-1', '^[[:alnum:].\-_/]$');
--- phone number
-insert into RefValues values ('tel', '-1', '^[*]{0,1}[[:num:]+');
--- duration			^[[:num:]]+[dhms][s]{0,1}$
-insert into RefValues values ('Duration', '-1', '^[[:num:]]+[dhms][s]{0,1}$');
--- SensorList		select ... TODO
-insert into RefValues values ('SensorList', '-2', 'select idObject, Val from ItemFieldVal where ...');
--- ActorList			select ... TODO
-insert into RefValues values ('ActorList', '-2', 'select idObject, Val from ItemFieldVal where ...');
 -- ImgSensorT		[{id:1,label:"USB"},{id:2,label:"URL"}]
 insert into RefValues values ('ImgSensorT', '1', 'USB');
 insert into RefValues values ('ImgSensorT', '2', 'URL');
@@ -76,18 +75,18 @@ insert into RefValues values ('DynParamT', '3', 'Float');
 insert into RefValues values ('DynParamT', '4', 'Text');
 insert into RefValues values ('DynParamT', '5', 'DateTime');
 insert into RefValues values ('DynParamT', '6', 'URL');
-
-
-insert into goHome values    ( 'Global', 'Version',         '0.1');
-insert into goHome values    ( 'Global', 'ApiVersion',      '0.1');
-insert into goHome values    ( 'Global', 'Email',           'admin@goHomeDomain.net');
-insert into goHome values    ( 'Global', 'UserItemId',      '1');
-insert into goHome values    ( 'Http',   'server_name',     'localhost');
-insert into goHome values    ( 'Http',   'https_port',      '5100');
-insert into goHome values    ( 'Http',   'server_crt',      '/var/goHome/certificats/server.crt.pem');
-insert into goHome values    ( 'Http',   'server_key',      '/var/goHome/certificats/server.key.pem');
-insert into goHome values    ( 'Http',   'ca_crt',          '/var/goHome/certificats/goHomeCAcert.pem');
-insert into goHome values    ( 'Http',   'fileserver_root', '/var/goHome/www');
+-- email			^[[:alnum:].\-_]*@[[:alnum:].\-_]*[.][[:alpha:]]{2,}$
+insert into RefValues values ('email', '-1', '^[a-zA-Z0-9.\-_]*(@)[a-zA-Z0-9.\-_]*(\.)[a-zA-Z]{2,}$');
+-- url				juste exclure les car speciaux ?
+insert into RefValues values ('url', '-1', '^[a-zA-Z0-9.\-_/]*$');
+-- phone number
+insert into RefValues values ('tel', '-1', '^[0-9]*$');
+-- duration			^[[:num:]]+[dhms][s]{0,1}$
+insert into RefValues values ('Duration', '-1', '^[0-9]+(h|m|s|ms)$');
+-- SensorList		select ... TODO
+insert into RefValues values ('SensorList', '-2', 'select idObject, Val from ItemFieldVal where ...');
+-- ActorList			select ... TODO
+insert into RefValues values ('ActorList', '-2', 'select idObject, Val from ItemFieldVal where ...');
 
 
 insert into Item select g.val, 'User', 1, 1, 0, '' from goHome g where g.perimeter='Global' and g.name ='UserItemId';
