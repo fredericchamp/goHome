@@ -1,3 +1,9 @@
 goHome
 perso*
+.idea
 
+Supprimerait certificats/certs/
+Supprimerait certificats/crl/
+Supprimerait certificats/newcerts/
+Supprimerait certificats/private/
+Supprimerait goHome.iml

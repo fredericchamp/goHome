@@ -19,7 +19,7 @@ func init() {
 	RegisterInternalFunc(ActorFunc, "SerialATSMS", SerialATSMS)
 }
 
-// actorSetup : read defined actors from DB then create a ticker and start reading goroutine for each actor
+// actorSetup : read defined actors from DB then TODO
 func actorSetup(db *sql.DB) (err error) {
 
 	//	actorObjs, err := getHomeObjects(db, ItemActor, ItemIdNone, -1)
@@ -85,7 +85,7 @@ func triggerActorById(actorId int, userId int, param string) (result string, err
 	return
 }
 
-// triggerActorByName : trigger actor function using ActCmd, restirered parameter 'ActParam' and dynamic param 'param'
+// triggerActorByName : trigger actor function using ActCmd, registered parameter 'ActParam' and dynamic param 'param'
 //func triggerActorByName(actorName string, userId int, param string) (result string, err error) {
 //	actorsMapLock.Lock()
 //	actor, found := actorsMap[actorName]
@@ -99,7 +99,7 @@ func triggerActorById(actorId int, userId int, param string) (result string, err
 //	return
 //}
 
-// triggerObjActor : trigger actor function using ActCmd, restirered parameter 'ActParam' and dynamic param 'param'
+// triggerObjActor : trigger actor function using ActCmd, registered parameter 'ActParam' and dynamic param 'param'
 func triggerObjActor(actor HomeObject, userId int, param string) (result string, err error) {
 	result = "Failed"
 	actCmd, err := actor.getStrVal("ActCmd")

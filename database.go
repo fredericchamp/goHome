@@ -59,7 +59,8 @@ type ItemField struct {
 	IdDataType TDataType
 	Label      string
 	Helper     string
-	Uniq       int
+	UniqKey    int
+	Required   int
 	RefList    string
 	Regexp     string
 }
@@ -353,11 +354,11 @@ func getItemFields(db *sql.DB, idItem TItemId, idObject int) (fields []ItemField
 
 	switch {
 	case idObject > 0:
-		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Label, f.Helper, f.Uniq, f.RefList, f.Regexp from ItemField f, ItemFieldVal v where f.idField = v.idField and v.idObject = ? order by f.nOrder", idObject)
+		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Label, f.Helper, f.UniqKey, f.Required, f.RefList, f.Regexp from ItemField f, ItemFieldVal v where f.idField = v.idField and v.idObject = ? order by f.nOrder", idObject)
 	case idItem > 0:
-		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Label, f.Helper, f.Uniq, f.RefList, f.Regexp from ItemField f where f.idItem = ? order by f.nOrder", idItem)
+		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Label, f.Helper, f.UniqKey, f.Required, f.RefList, f.Regexp from ItemField f where f.idItem = ? order by f.nOrder", idItem)
 	default:
-		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Label, f.Helper, f.Uniq, f.RefList, f.Regexp from ItemField f order by f.idItem, f.nOrder")
+		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Label, f.Helper, f.UniqKey, f.Required, f.RefList, f.Regexp from ItemField f order by f.idItem, f.nOrder")
 	}
 	if err != nil {
 		glog.Errorf("getItemFields query fail (item=%d,obj=%d) : %s ", idItem, idObject, err)
@@ -367,7 +368,7 @@ func getItemFields(db *sql.DB, idItem TItemId, idObject int) (fields []ItemField
 
 	for rows.Next() {
 		err = rows.Scan(&curField.IdField, &curField.IdItem, &curField.NOrder, &curField.Name, &curField.IdDataType,
-			&curField.Label, &curField.Helper, &curField.Uniq, &curField.RefList, &curField.Regexp)
+			&curField.Label, &curField.Helper, &curField.UniqKey, &curField.Required, &curField.RefList, &curField.Regexp)
 		if err != nil {
 			glog.Errorf("getItemFields scan fail (item=%d,obj=%d) : %s ", idItem, idObject, err)
 			return
