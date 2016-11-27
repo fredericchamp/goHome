@@ -1,9 +1,6 @@
 goHome
-perso*
+Spec.txt
 .idea
-
-Supprimerait certificats/certs/
-Supprimerait certificats/crl/
-Supprimerait certificats/newcerts/
-Supprimerait certificats/private/
-Supprimerait goHome.iml
+perso*
+certificats
+goHome.iml

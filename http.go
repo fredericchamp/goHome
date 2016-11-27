@@ -12,7 +12,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strconv"
-	"time"
+	//"time"
 
 	"github.com/golang/glog"
 )
@@ -29,18 +29,18 @@ func getFormStrVal(form url.Values, key string, idx int) (strVal string, err err
 	return
 }
 
-func getFormIntVal(form url.Values, key string, idx int) (intVal int, err error) {
-	strVal, err := getFormStrVal(form, key, idx)
-	if err != nil {
-		return
-	}
-	intVal, err = strconv.Atoi(strVal)
-	if err != nil {
-		err = errors.New(fmt.Sprintf(`{"error":"Fail to parse %s id from (%s)"}`, key, strVal))
-		return
-	}
-	return
-}
+//func getFormIntVal(form url.Values, key string, idx int) (intVal int, err error) {
+//	strVal, err := getFormStrVal(form, key, idx)
+//	if err != nil {
+//		return
+//	}
+//	intVal, err = strconv.Atoi(strVal)
+//	if err != nil {
+//		err = errors.New(fmt.Sprintf(`{"error":"Fail to parse %s id from (%s)"}`, key, strVal))
+//		return
+//	}
+//	return
+//}
 
 func writeApiError(w http.ResponseWriter, errMsg string) {
 	w.Write(apiError(errMsg))
@@ -50,30 +50,30 @@ func writeApiError(w http.ResponseWriter, errMsg string) {
 // -----------------------------------------------
 
 // defaultResponse : for testing only
-func defaultResponse(w http.ResponseWriter, r *http.Request) {
-	const header = `<!-- HEADER -->
-<html>
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>goHome</title>
-</head>
-<body>
-`
-	const footer = `<!-- FOOTER -->
-<br><br>
-<p align="center">-*-</p>
-<p align="center">%s</p>
-</body>
-</html>
-`
-	fmt.Fprintf(w, header)
-	fmt.Fprintf(w, "<p>goHome HTTPS server<p>\n")
-	fmt.Fprintf(w, "<p>goHome version %s</p>\n", goHomeVersion)
-	fmt.Fprintf(w, "<p>URL requested : %s </p>\n", r.URL.Path)
-	fmt.Fprintf(w, "<p>Post params : %s</p>\n", r.Form)
-	fmt.Fprintf(w, footer, time.Now().String())
-}
+//func defaultResponse(w http.ResponseWriter, r *http.Request) {
+//	const header = `<!-- HEADER -->
+//<html>
+//<head>
+//<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+//<meta name="viewport" content="width=device-width, initial-scale=1">
+//<title>goHome</title>
+//</head>
+//<body>
+//`
+//	const footer = `<!-- FOOTER -->
+//<br><br>
+//<p align="center">-*-</p>
+//<p align="center">%s</p>
+//</body>
+//</html>
+//`
+//	fmt.Fprintf(w, header)
+//	fmt.Fprintf(w, "<p>goHome HTTPS server<p>\n")
+//	fmt.Fprintf(w, "<p>goHome version %s</p>\n", goHomeVersion)
+//	fmt.Fprintf(w, "<p>URL requested : %s </p>\n", r.URL.Path)
+//	fmt.Fprintf(w, "<p>Post params : %s</p>\n", r.Form)
+//	fmt.Fprintf(w, footer, time.Now().String())
+//}
 
 // -----------------------------------------------
 
@@ -120,18 +120,11 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch jsonCmde.Command {
 
-	case apiReadItemType: // TODO : remove, replace by apiReadRefList("ItemType")
-		if glog.V(1) {
-			glog.Info(jsonCmde.Command)
-		}
-		fmt.Fprint(w, `{"ItemEntity":1,"ItemSensor":2,"ItemActor":3,"ItemSensorAct":4,"ItemStreamSensor":5}`)
-		return
-
 	case apiReadRefList:
 		if glog.V(1) {
 			glog.Infof("%s (name=%s)", jsonCmde.Command, jsonCmde.Jsonparam)
 		}
-		w.Write(fctApiRefList(profil, jsonCmde))
+		w.Write(fctApiRefList(jsonCmde))
 		return
 
 	case apiReadCurrentUser:
@@ -143,14 +136,14 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 
 	case apiReadItem:
 		if glog.V(1) {
-			glog.Infof("%s (type=%d, item=%d)", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid)
+			glog.Infof("%s (item=%d)", jsonCmde.Command, jsonCmde.Itemid)
 		}
 		w.Write(fctApiReadItem(profil, jsonCmde))
 		return
 
 	case apiReadObject:
 		if glog.V(1) {
-			glog.Infof("%s (type=%d, item=%d, obj=%d)", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid)
+			glog.Infof("%s (item=%d, obj=%d)", jsonCmde.Command, jsonCmde.Itemid, jsonCmde.Objectid)
 		}
 		w.Write(fctApiReadObject(profil, jsonCmde))
 		return
@@ -176,17 +169,13 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(fctApiReadActorRes(profil, jsonCmde))
 		return
 
-	case apiSaveItem: // TODO
-		// Unmarchal jsonparam to Item
-		// check item content
-		// check profil rights on item
-		// save item to DB (update or insert)
+	case apiSaveItem:
 		writeApiError(w, fmt.Sprintf("Command %s not ready", jsonCmde.Command))
 		return
 
 	case apiSaveObject:
 		if glog.V(1) {
-			glog.Infof("%s (type=%d, item=%d, obj=%d)", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid)
+			glog.Infof("%s (item=%d, obj=%d)", jsonCmde.Command, jsonCmde.Itemid, jsonCmde.Objectid)
 		}
 		w.Write(fctApiSaveObject(profil, jsonCmde))
 		return
@@ -214,7 +203,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 
 	case apiTriggerActor:
 		if glog.V(1) {
-			glog.Infof("%s (type=%d, item=%d, obj=%d)", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid)
+			glog.Infof("%s (item=%d, obj=%d)", jsonCmde.Command, jsonCmde.Itemid, jsonCmde.Objectid)
 		}
 		w.Write(fctApiTriggerActor(profil, userObj.getId(), jsonCmde))
 		return
@@ -244,7 +233,7 @@ func startHTTPS(chanExit chan bool) {
 		chanExit <- true
 		return
 	}
-	// defer db.Close() dont use that, if ListenAndServeTLS run fine, it wont return !
+	// defer db.Close() don't use that, if ListenAndServeTLS run fine, it wont return !
 
 	//-----------------------------
 	// Read global param from DB
@@ -309,7 +298,7 @@ func startHTTPS(chanExit chan bool) {
 		return
 	}
 	for source, target := range proxyMap {
-		url, err := url.Parse(target)
+		urlTarget, err := url.Parse(target)
 		if err != nil {
 			glog.Errorf("startHTTPS fail to parse proxy url target(%s) : %s", target, err)
 		}
@@ -317,7 +306,7 @@ func startHTTPS(chanExit chan bool) {
 			glog.Infof("Adding proxy (from=%s, to=%s)", source, target)
 		}
 
-		serverMux.Handle(source, http.StripPrefix(source, httputil.NewSingleHostReverseProxy(url)))
+		serverMux.Handle(source, http.StripPrefix(source, httputil.NewSingleHostReverseProxy(urlTarget)))
 	}
 
 	// Note : access to "/api", apiHandler required a registered user in DB

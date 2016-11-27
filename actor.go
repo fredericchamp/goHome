@@ -22,7 +22,7 @@ func init() {
 // actorSetup : read defined actors from DB then TODO
 func actorSetup(db *sql.DB) (err error) {
 
-	//	actorObjs, err := getHomeObjects(db, ItemActor, ItemIdNone, -1)
+	//	actorObjs, err := getHomeObjects(db, ItemActor, -1)
 	//	if err != nil {
 	//		return
 	//	}
@@ -71,7 +71,7 @@ func triggerActorById(actorId int, userId int, param string) (result string, err
 	//	err = errors.New(fmt.Sprintf("No known actor with id = %d", actorId))
 	//	glog.Error(err)
 
-	objs, err := getHomeObjects(nil, ItemTypeNone, ItemIdNone, actorId)
+	objs, err := getHomeObjects(nil, ItemIdNone, actorId)
 	if err != nil {
 		return
 	}

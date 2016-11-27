@@ -4,8 +4,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
-	"strconv"
 	"time"
 
 	"github.com/golang/glog"
@@ -13,15 +11,14 @@ import (
 
 // -----------------------------------------------
 
-// Accepted Format = {"command":"api...", "itemtypeid":id, "itemid":id, "objectid":id, "startts":ts, "endts":ts, "jsonparam":{...}}
+// Accepted Format = {"command":"api...", "itemid":id, "objectid":id, "startts":ts, "endts":ts, "jsonparam":{...}}
 
 type apiCommand string
 
 const (
-	apiReadItemType    apiCommand = "ReadItemTypes"
-	apiReadRefList                = "ReadRefList"
+	apiReadRefList     apiCommand = "ReadRefList"
 	apiReadCurrentUser            = "ReadCurrentUser"
-	apiReadItem                   = "ReadItems"
+	apiReadItem                   = "ReadItem"
 	apiReadObject                 = "ReadObject"
 	apiReadSensor                 = "ReadSensor"
 	apiReadHistoVal               = "ReadHistoVal"
@@ -35,13 +32,12 @@ const (
 )
 
 type apiCommandSruct struct {
-	Command    apiCommand
-	Itemtypeid TItemType
-	Itemid     TItemId
-	Objectid   int
-	Startts    int64
-	Endts      int64
-	Jsonparam  string
+	Command   apiCommand
+	Itemid    TItemId
+	Objectid  int
+	Startts   int64
+	Endts     int64
+	Jsonparam string
 }
 
 // -----------------------------------------------
@@ -74,7 +70,7 @@ func apiObjectResponse(profil TUserProfil, obj HomeObject) (apiResp []byte) {
 	return
 }
 
-func fctApiRefList(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []byte) {
+func fctApiRefList(jsonCmde apiCommandSruct) (apiResp []byte) {
 	list, err := getRefList(nil, jsonCmde.Jsonparam)
 	if err != nil {
 		apiResp = apiError(fmt.Sprintf("%s failed for (%s) : %s", jsonCmde.Command, jsonCmde.Jsonparam, err))
@@ -83,44 +79,44 @@ func fctApiRefList(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []byte
 
 	apiResp, err = json.Marshal(list)
 	if err != nil {
-		apiResp = apiError(fmt.Sprintf("%s failed for (type=%d, item=%d) : %s", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, err))
+		apiResp = apiError(fmt.Sprintf("%s failed for (item=%d) : %s", jsonCmde.Command, jsonCmde.Itemid, err))
 		return
 	}
 	return
 }
 
 func fctApiReadItem(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []byte) {
-	items, err := getManageItems(nil, jsonCmde.Itemtypeid, jsonCmde.Itemid)
+	items, err := getManageItems(nil, jsonCmde.Itemid)
 	if err != nil {
-		apiResp = apiError(fmt.Sprintf("%s failed for (type=%d, item=%d) : %s", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, err))
+		apiResp = apiError(fmt.Sprintf("%s failed for (item=%d) : %s", jsonCmde.Command, jsonCmde.Itemid, err))
 		return
 	}
 
 	apiResp, err = json.Marshal(profilFilteredItems(profil, items))
 	if err != nil {
-		apiResp = apiError(fmt.Sprintf("%s failed for (type=%d, item=%d) : %s", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, err))
+		apiResp = apiError(fmt.Sprintf("%s failed for (item=%d) : %s", jsonCmde.Command, jsonCmde.Itemid, err))
 		return
 	}
 	return
 }
 
 func fctApiReadObject(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []byte) {
-	objs, err := getHomeObjects(nil, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid)
+	objs, err := getHomeObjects(nil, jsonCmde.Itemid, jsonCmde.Objectid)
 	if err != nil {
-		apiResp = apiError(fmt.Sprintf("%s failed for (type=%d, item=%d, obj=%d) : %s", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid, err))
+		apiResp = apiError(fmt.Sprintf("%s failed for (item=%d, obj=%d) : %s", jsonCmde.Command, jsonCmde.Itemid, jsonCmde.Objectid, err))
 		return
 	}
 
 	apiResp, err = json.Marshal(profilFilteredObjects(profil, objs))
 	if err != nil {
-		apiResp = apiError(fmt.Sprintf("%s failed for (type=%d, item=%d, obj=%d) : %s", jsonCmde.Command, jsonCmde.Itemtypeid, jsonCmde.Itemid, jsonCmde.Objectid, err))
+		apiResp = apiError(fmt.Sprintf("%s failed for (item=%d, obj=%d) : %s", jsonCmde.Command, jsonCmde.Itemid, jsonCmde.Objectid, err))
 		return
 	}
 	return
 }
 
 func fctApiReadSensor(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []byte) {
-	objs, err := getHomeObjects(nil, ItemTypeNone, ItemIdNone, jsonCmde.Objectid)
+	objs, err := getHomeObjects(nil, ItemIdNone, jsonCmde.Objectid)
 	if err != nil {
 		apiResp = apiError(fmt.Sprintf("%s failed for (obj=%d) : %s", jsonCmde.Command, jsonCmde.Objectid, err))
 		return
@@ -137,7 +133,7 @@ func fctApiReadSensor(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []b
 		return
 	}
 
-	value, err := readSensoValue(sensor)
+	value, err := readSensorValue(sensor)
 	if err != nil {
 		apiResp = apiError(fmt.Sprintf("%s failed for (obj=%d) : %s", jsonCmde.Command, jsonCmde.Objectid, err))
 		return
@@ -215,13 +211,6 @@ func fctApiSaveObject(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []b
 		glog.Infof("Object to save \n%+v", objIn)
 	}
 
-	if glog.V(2) {
-		glog.Info("fctApiSaveObject : check object validity")
-	}
-	if err := objIn.ValidateValues(objIn.Values); err != nil {
-		apiResp = apiError(fmt.Sprintf("%s : %s", jsonCmde.Command, err.Error()))
-		return
-	}
 	// check profil access rights on new object
 	if err := checkAccessToObject(profil, objIn); err != nil {
 		apiResp = apiError(err.Error())
@@ -231,11 +220,10 @@ func fctApiSaveObject(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []b
 	// Must not use jsonCmde.Objectid, just in case jsonCmde.Objectid != objIn.Values[0].
 	objectid := objIn.Values[0].IdObject
 
-	var objFields []ItemField
-
+	// fetch Fields definition from DB, and ignore received fields definition if any
 	if objectid > 0 {
 		// if objectid > 0 it's an UPDATE => fetch existing object
-		objs, err := getHomeObjects(nil, jsonCmde.Itemtypeid, jsonCmde.Itemid, objectid)
+		objs, err := getHomeObjects(nil, jsonCmde.Itemid, objectid)
 		if err != nil {
 			apiResp = apiError(fmt.Sprintf("%s fail to load matching object (%s) : %s", jsonCmde.Command, objectid, err))
 			return
@@ -255,7 +243,7 @@ func fctApiSaveObject(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []b
 			apiResp = apiError(err.Error())
 			return
 		}
-		objFields = objs[0].Fields
+		objIn.Fields = objs[0].Fields
 	} else {
 		// else it's an INSERT => fetch fields definition
 		fields, err := getItemFields(nil, jsonCmde.Itemid, objectid)
@@ -263,12 +251,14 @@ func fctApiSaveObject(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []b
 			apiResp = apiError(err.Error())
 			return
 		}
-		objFields = fields
+		objIn.Fields = fields
 	}
 
-	// Check objIn fields match objDb fields
-	if !reflect.DeepEqual(objIn.Fields, objFields) {
-		apiResp = apiError(fmt.Sprintf("%s received []Fields does not match []Fields in DB for itemid=%d", jsonCmde.Command, jsonCmde.Itemid))
+	if glog.V(2) {
+		glog.Info("fctApiSaveObject : check object validity")
+	}
+	if err := objIn.ValidateValues(objIn.Values); err != nil {
+		apiResp = apiError(fmt.Sprintf("%s : %s", jsonCmde.Command, err.Error()))
 		return
 	}
 
@@ -279,23 +269,20 @@ func fctApiSaveObject(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []b
 		return
 	}
 
-	// if user => reload user list : loadUsers(nil, tue)
-	if strIdItemUser, err := getGlobalParam(nil, "Global", "UserItemId"); err != nil {
-		apiResp = apiError(fmt.Sprintf("fctApiSaveObject : get UserItemId fail : %s", err))
-		return
-	} else {
-		idItemUser, err := strconv.Atoi(strIdItemUser)
+	// Update in-memory data with new object / new object values
+	switch objIn.Fields[0].IdItem {
+	case ItemUser:
+		go loadUsers(nil, true)
+		break
+	case ItemSensor:
+		err = sensorUpdateTicker(objIn)
 		if err != nil {
-			apiResp = apiError(fmt.Sprintf("fctApiSaveObject : get int(UserItemId) fail : %s", err))
-			return
+			glog.Errorf("fctApiSaveObject : sensor #%d update failed : %s", objIn.Values[0].IdObject, err)
 		}
-		if TItemId(idItemUser) == objFields[0].IdItem {
-			go loadUsers(nil, true)
-		}
+		break
 	}
 
 	// return saved object
-	jsonCmde.Itemtypeid = ItemTypeNone
 	jsonCmde.Itemid = ItemIdNone
 	jsonCmde.Objectid = objectid
 	if glog.V(2) {

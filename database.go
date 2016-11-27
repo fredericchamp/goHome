@@ -27,26 +27,21 @@ type RefValue struct {
 	Label string
 }
 
-type TItemType int
-
 type TItemId int
 
 const (
-	ItemTypeNone TItemType = iota
-	ItemEntity
+	ItemIdNone TItemId = iota
+	ItemUser
 	ItemSensor
 	ItemActor
 	ItemSensorAct
 	ItemImageSensor
 )
 
-const ItemIdNone TItemId = 0
-
 type Item struct {
 	IdItem        TItemId
 	Name          string
 	IdProfil      TUserProfil
-	IdItemType    TItemType
 	IdMasterItem  TItemId
 	IconeFileName string
 }
@@ -287,7 +282,7 @@ func getGlobalParamList(db *sql.DB, perimeter string) (valMap map[string]string,
 
 // getManageItems select manage Items from DB
 // If idItem > 0 return Item with given Id else return all Items
-func getManageItems(db *sql.DB, idItemType TItemType, idItem TItemId) (items []Item, err error) {
+func getManageItems(db *sql.DB, idItem TItemId) (items []Item, err error) {
 	if db == nil {
 		if db, err = openDB(); err != nil {
 			return
@@ -298,35 +293,32 @@ func getManageItems(db *sql.DB, idItemType TItemType, idItem TItemId) (items []I
 	var curItem Item
 	var rows *sql.Rows
 
-	switch {
-	case idItem > 0:
-		rows, err = db.Query("select idItem, Name, idProfil, idItemType, idMasterItem, iconeFileName from Item where idItem = ? ", idItem)
-	case idItemType > 0:
-		rows, err = db.Query("select idItem, Name, idProfil, idItemType, idMasterItem, iconeFileName from Item where idItemType = ? ", idItemType)
-	default:
-		rows, err = db.Query("select idItem, Name, idProfil, idItemType, idMasterItem, iconeFileName from Item order by idItem")
+	if idItem > 0 {
+		rows, err = db.Query("select idItem, Name, idProfil, idMasterItem, iconeFileName from Item where idItem = ? ", idItem)
+	} else {
+		rows, err = db.Query("select idItem, Name, idProfil, idMasterItem, iconeFileName from Item order by idItem")
 	}
 	if err != nil {
-		glog.Errorf("getManageItems query fail (type=%d,item=%d) : %s ", idItemType, idItem, err)
+		glog.Errorf("getManageItems query fail (type=%d,item=%d) : %s ", idItem, err)
 		return
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		err = rows.Scan(&curItem.IdItem, &curItem.Name, &curItem.IdProfil, &curItem.IdItemType, &curItem.IdMasterItem, &curItem.IconeFileName)
+		err = rows.Scan(&curItem.IdItem, &curItem.Name, &curItem.IdProfil, &curItem.IdMasterItem, &curItem.IconeFileName)
 		if err != nil {
-			glog.Errorf("getManageItems scan fail (type=%d,item=%d) : %s ", idItemType, idItem, err)
+			glog.Errorf("getManageItems scan fail (type=%d,item=%d) : %s ", idItem, err)
 			return
 		}
 		items = append(items, curItem)
 	}
 	if err = rows.Err(); err != nil {
-		glog.Errorf("getManageItems rows.Err (type=%d,item=%d) : %s ", idItemType, idItem, err)
+		glog.Errorf("getManageItems rows.Err (type=%d,item=%d) : %s ", idItem, err)
 		return
 	}
 
 	if len(items) <= 0 {
-		err = errors.New(fmt.Sprintf("Manage Items not found (itemType=%d,item=%d)", idItemType, idItem))
+		err = errors.New(fmt.Sprintf("Manage Items not found (item=%d)", idItem))
 		glog.Errorf("getManageItems %s ", err)
 		return
 	}
@@ -354,11 +346,17 @@ func getItemFields(db *sql.DB, idItem TItemId, idObject int) (fields []ItemField
 
 	switch {
 	case idObject > 0:
-		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Label, f.Helper, f.UniqKey, f.Required, f.RefList, f.Regexp from ItemField f, ItemFieldVal v where f.idField = v.idField and v.idObject = ? order by f.nOrder", idObject)
+		rows, err = db.Query(
+			`select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Label, f.Helper, f.UniqKey, f.Required, f.RefList, f.Regexp
+			from ItemField f, ItemFieldVal v where f.idField = v.idField and v.idObject = ? order by f.nOrder`, idObject)
 	case idItem > 0:
-		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Label, f.Helper, f.UniqKey, f.Required, f.RefList, f.Regexp from ItemField f where f.idItem = ? order by f.nOrder", idItem)
+		rows, err = db.Query(
+			`select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Label, f.Helper, f.UniqKey, f.Required, f.RefList, f.Regexp
+			from ItemField f where f.idItem = ? order by f.nOrder`, idItem)
 	default:
-		rows, err = db.Query("select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Label, f.Helper, f.UniqKey, f.Required, f.RefList, f.Regexp from ItemField f order by f.idItem, f.nOrder")
+		rows, err = db.Query(
+			`select f.idField, f.idItem, f.nOrder, f.Name, f.idDataType, f.Label, f.Helper, f.UniqKey, f.Required, f.RefList, f.Regexp
+			from ItemField f order by f.idItem, f.nOrder`)
 	}
 	if err != nil {
 		glog.Errorf("getItemFields query fail (item=%d,obj=%d) : %s ", idItem, idObject, err)

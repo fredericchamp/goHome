@@ -1,71 +1,125 @@
 
 
-body {
+body.gohome {
 	background-color: white;
 	background-image: url(/images/PlageMoorea.jpg);
 	background-repeat: no-repeat;
 	background-attachment: fixed;
 }
 
-h1 {
-/*	background-color: white;*/
+.blackfnt {
+	color:black;
 }
 
-h2 {
-/*	background-color: blue;*/
-}
 
-table{
-/*	border: 1px solid blue;*/
-	background-color:#CCCCCC
-}
 
-td {
+div.blackbox {
+	border: 1px solid black;
 	text-align: center;
 }
 
-/*
-div.logfile {
+div.backgr {
+	background-image: url(/images/PlageMoorea.jpg);
+}
+
+div.goh-msg {
+	position: fixed;
+	top:40%;
+	left:25%;
+	width:50%;
+	margin:auto;
+    z-index: 99;
+}
+
+div.hide {
+    display: none;
+}
+
+
+div.mainheader {
+	text-align: center;
+    width: 100%;
+	margin: 5px;
+}
+
+div.gray-out-page {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    background: rgba(0, 0, 0, 0.5);
+    -webkit-overflow-scrolling: touch;
+    outline: 0;
+}
+div.form-panel {
+    position: relative;
+    top: 30px;
+    left: 10%;
+    width: 80%;
+    height: 90%;
+    z-index: 51;
+    opacity: 1;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+span.ico {
+    float: left;
+    width: 55px;
+	margin: 5px;
+}
+
+img.icone{
+	width: 45px;
+	max-width: 45px;
+	height: 45px;
+	max-height: 45px;
+}
+
+img.imgsensor {
+	position: absolute;
 	width: 100%;
-	border: 2px solid black;
+	max-width: 100%;
+	height: auto;
+	max-height: 100%;
+	bottom:0;
+	right:0;
+}
+
+
+div.imgsensor {
+	position: fixed;
 	display: none;
+	bottom: 6%;
+	left:2%;
+	width: 96%;
+	height: 90%;
 }
 
-table.std {
-}
-table.std_in {
-	width: 100%;
+
+div.imgsensortitle {
+	position: absolute;
+	width: 96%;
+	bottom:4%;
+	left:2%;
+	padding:5px;
+	font-size: 2em;
+	color: white;
 }
 
-tr.titre {
-	text-align: center;
-	padding: 20px;
-	padding-top:10px;
-	background-color:#CCCCCC
-}
-*/
+/* --------------------------------------------------------------------------*/
 
-td.bouton {
-	width: 100px;
-	border: 2px solid black;
-	font-size: 80%;
-	text-align: center;
-	cursor: pointer;
-}
-
-td.blackbox {
-	border: 2px solid black;
+div.test {
+	border: 2px solid red;
 	text-align: left;
+	position: fixed;
+	bottom: 0px;
+	right:0px;
 	padding: 2px;
 }
 
-td.result {
-	font-size: 90%;
-	background-color:#CCCCCC
-	width: 450px;
-}
 
-input.jsonparam {
-	width: 450px;
-}
+
 

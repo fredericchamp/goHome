@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -23,11 +22,11 @@ const (
 	ProfilUser
 )
 
-var userProfilNames = map[TUserProfil]string{
-	ProfilNone:  "No privilege",
-	ProfilAdmin: "Administrator",
-	ProfilUser:  "User",
-}
+//var userProfilNames = map[TUserProfil]string{
+//	ProfilNone:  "No privilege",
+//	ProfilAdmin: "Administrator",
+//	ProfilUser:  "User",
+//}
 
 // -----------------------------------------------
 
@@ -44,7 +43,7 @@ func getEmailFromCert(peerCrt []*x509.Certificate) (email string, err error) {
 		return
 	}
 
-	// With the certificats I use email is the 5th Attribut -  this may chage given the CA settings (TODO : check, not sure)
+	// With the certificats I build email is the 5th Attribut -  this may chage given the CA settings (TODO : check, not sure)
 	if len(peerCrt[0].Subject.Names) < 5 {
 		err = errors.New(fmt.Sprintf("Did not locate email in (%s)", peerCrt[0].Subject.Names))
 		glog.Error(err)
@@ -73,18 +72,8 @@ func loadUsers(db *sql.DB, force bool) (nbUser int, err error) {
 		return
 	}
 
-	value, err := getGlobalParam(db, "Global", "UserItemId")
-	if err != nil {
-		return
-	}
-	userItemId, err := strconv.Atoi(value)
-	if err != nil {
-		glog.Errorf("Error converting userItemId (%s) : %s", value, err)
-		return
-	}
-
 	// read all users
-	userList, err = getHomeObjects(db, ItemTypeNone, TItemId(userItemId), -1)
+	userList, err = getHomeObjects(db, ItemUser, -1)
 
 	nbUser = len(userList)
 
@@ -214,7 +203,7 @@ func checkAccessToObject(profil TUserProfil, obj HomeObject) error {
 
 // checkAccessToObjectId : check if 'profil' has acces to object (obj read from DB using objectid)
 func checkAccessToObjectId(profil TUserProfil, objectid int) error {
-	objs, err := getHomeObjects(nil, ItemTypeNone, ItemIdNone, objectid)
+	objs, err := getHomeObjects(nil, ItemIdNone, objectid)
 	if err != nil {
 		return err
 	}
