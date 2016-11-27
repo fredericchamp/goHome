@@ -10,7 +10,7 @@
 create table goHome (Perimeter text, Name text, Val text);
 create unique index goHome_Uniq on goHome (Perimeter, Name);
 
-create table Item (idItem integer not null primary key, Name text, idProfil integer not null, idItemType integer not null, idMasterItem integer not null, iconeFileName text);
+create table Item (idItem integer not null primary key, Name text, idProfil integer not null, idMasterItem integer not null, iconeFileName text);
 
 create table ItemField (idField integer not null primary key, idItem integer not null, nOrder integer not null, Name text, idDataType not null, Label text, Helper text, UniqKey integer, Required integer, RefList text, Regexp text );
 create unique index ItemField_Uniq on ItemField (idItem, nOrder);
@@ -33,7 +33,6 @@ create unique index RefValues_PK2 on RefValues (name, label);
 
 insert into goHome values    ( 'Global', 'Version',         '0.1');
 insert into goHome values    ( 'Global', 'Email',           'admin@goHomeDomain.net');
-insert into goHome values    ( 'Global', 'UserItemId',      '1');
 insert into goHome values    ( 'Http',   'server_name',     'localhost');
 insert into goHome values    ( 'Http',   'https_port',      '5100');
 insert into goHome values    ( 'Http',   'server_crt',      '/var/goHome/certificats/server.crt.pem');
@@ -45,12 +44,6 @@ insert into goHome values    ( 'Http',   'fileserver_root', '/var/goHome/www');
 -- YN				[{id:1,label:"Yes"},{id:0,label:"No"}]
 insert into RefValues values ('YN', '0', 'No');
 insert into RefValues values ('YN', '1', 'Yes');
--- ItemType			[{id:1,label:"Entity"},{id:2,label:"Sensor"},{id:3,label:"Actor"},{id:4,label:"Actor trigger by sensor"},{id:5,label:"Image Sensor"}]
-insert into RefValues values ('ItemType', '1', 'Entity');
-insert into RefValues values ('ItemType', '2', 'Sensor');
-insert into RefValues values ('ItemType', '3', 'Actor');
-insert into RefValues values ('ItemType', '4', 'Actor trigger by sensor');
-insert into RefValues values ('ItemType', '5', 'Image Sensor');
 -- UserProfil		[{id:1,label:"Administrator"},{id:2,label:"User"}]
 insert into RefValues values ('UserProfil', '1', 'Administrator');
 insert into RefValues values ('UserProfil', '2', 'User');
@@ -83,13 +76,20 @@ insert into RefValues values ('url', '-1', '^[a-zA-Z0-9.\-_/]*$');
 insert into RefValues values ('tel', '-1', '^[0-9]*$');
 -- duration			^[[:num:]]+[dhms][s]{0,1}$
 insert into RefValues values ('Duration', '-1', '^[0-9]+(h|m|s|ms)$');
--- SensorList		select ... TODO
+-- TODO SensorList		select ...
 insert into RefValues values ('SensorList', '-2', 'select idObject, Val from ItemFieldVal where ...');
--- ActorList			select ... TODO
+-- TODO ActorList			select ...
 insert into RefValues values ('ActorList', '-2', 'select idObject, Val from ItemFieldVal where ...');
 
 
-insert into Item select g.val, 'User', 1, 1, 0, '' from goHome g where g.perimeter='Global' and g.name ='UserItemId';
+insert into Item values ( 1, 'User',         1, 0, '' );
+insert into Item values ( 2, 'Sensor',       1, 0, '' );
+insert into Item values ( 3, 'Actor',        1, 0, '' );
+insert into Item values ( 4, 'SensorAct',    1, 0, '' );
+insert into Item values ( 5, 'Image Sensor', 1, 0, '' );
+
+
+
 insert into ItemField select max(f.idField)+1, i.idItem, 1,               'ImgFileName', 4, 'Avatar picture', 'URL for avatar',  0, 0, '',           'url'   from ItemField f, Item i where i.name='User'                         group by i.idItem;
 insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'FirstName',   4, 'First name',     'user first name', 0, 1, '',           ''      from ItemField f, Item i where i.name='User' and f.idItem = i.idItem group by i.idItem;
 insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'LastName',    4, 'Last name',      'user last  name', 0, 1, '',           ''      from ItemField f, Item i where i.name='User' and f.idItem = i.idItem group by i.idItem;
@@ -107,7 +107,6 @@ insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'               
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                from ItemFieldVal v, ItemField f, Item i where f.name='IsActive'    and i.name='User' and f.idItem = i.idItem group by f.nOrder;
 
 
-insert into Item select max(i.idItem)+1, 'Sensor', 1, 2, 0, '' from Item i;
 insert into ItemField select max(f.idField)+1, i.idItem, 1,               'ImgFileName', 4, 'Icone for sensor', 'URL for icone',              0, 1, '',           'url'      from ItemField f, Item i where i.name='Sensor'                         group by i.idItem;
 insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'Name',        4, 'Name',             'sensor name (unique)',       1, 1, '',           ''         from ItemField f, Item i where i.name='Sensor' and f.idItem = i.idItem group by i.idItem;
 insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'IdProfil',    2, 'User profil',      'profil for access',          0, 1, 'UserProfil', ''         from ItemField f, Item i where i.name='Sensor' and f.idItem = i.idItem group by i.idItem;
@@ -153,7 +152,6 @@ insert into ItemFieldVal select max(v.idObject)  , f.idField, '2'               
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '0'                                            from ItemFieldVal v, ItemField f, Item i where f.name='IsActive'    and i.name='Sensor' and f.idItem = i.idItem group by f.nOrder;
 
 
-insert into Item select max(i.idItem)+1, 'Actor', 1, 3, 0, '' from Item i;
 insert into ItemField select max(f.idField)+1, i.idItem, 1,               'ImgFileName',  4, 'Icone for actor',     'URL for icone',           0, 1, '',           'url' from ItemField f, Item i where i.name='Actor'                         group by i.idItem;
 insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'Name',         4, 'Name',                'actor name (unique)',     1, 1, '',           ''    from ItemField f, Item i where i.name='Actor' and f.idItem = i.idItem group by i.idItem;
 insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'IdProfil',     2, 'User profil',         'profil for access',       0, 1, 'UserProfil', ''    from ItemField f, Item i where i.name='Actor' and f.idItem = i.idItem group by i.idItem;
@@ -200,21 +198,19 @@ insert into ItemFieldVal select max(v.idObject)  , f.idField, '4'               
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                 from ItemFieldVal v, ItemField f, Item i where f.name='IsActive'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 
 
-insert into Item select max(i.idItem)+1, 'SensorAct', 1, 4, 0, '' from Item i;
 insert into ItemField select max(f.idField)+1, i.idItem, 1,               'idMasterObj', 2, 'Master',    'linked sensor',     0, 1, 'SensorList', '' from ItemField f, Item i where i.name='SensorAct'                         group by i.idItem;
 insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'idActor',     2, 'Actor',     'trigger actor',     0, 1, 'ActorList',  '' from ItemField f, Item i where i.name='SensorAct' and f.idItem = i.idItem group by i.idItem;
 insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'Condition',   4, 'Condition', 'trigger condition', 0, 0, '',           '' from ItemField f, Item i where i.name='SensorAct' and f.idItem = i.idItem group by i.idItem;
 insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'ActorParam',  4, 'Parameter', 'action parameters', 0, 0, '',           '' from ItemField f, Item i where i.name='SensorAct' and f.idItem = i.idItem group by i.idItem;
 insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'IsActive',    2, 'Active',    'status',            0, 1, 'YN',         '' from ItemField f, Item i where i.name='SensorAct' and f.idItem = i.idItem group by i.idItem;
 
-insert into ItemFieldVal select max(v.idObject)+1, f.idField, mv.idObject                                   from ItemFieldVal mv, ItemField mf, Item mi, ItemFieldVal v, ItemField f, Item i where f.name='idMasterObj' and i.name='SensorAct' and f.idItem = i.idItem and mv.idfield = mv.idfield and mv.val='Alarm'   and mf.name='Name' and mf.idItem = mi.idItem and mi.idItemType=2 group by f.nOrder;
-insert into ItemFieldVal select max(v.idObject)  , f.idField, av.idObject                                   from ItemFieldVal av, ItemField af, Item ai, ItemFieldVal v, ItemField f, Item i where f.name='idActor'     and i.name='SensorAct' and f.idItem = i.idItem and av.idfield = av.idfield and av.val='SendSMS' and af.name='Name' and af.idItem = ai.idItem and ai.idItemType=3 group by f.nOrder;
+insert into ItemFieldVal select max(v.idObject)+1, f.idField, mv.idObject                                   from ItemFieldVal mv, ItemField mf, Item mi, ItemFieldVal v, ItemField f, Item i where f.name='idMasterObj' and i.name='SensorAct' and f.idItem = i.idItem and mv.idfield = mv.idfield and mv.val='Alarm'   and mf.name='Name' and mf.idItem = mi.idItem and mi.name = 'Sensor' group by f.nOrder;
+insert into ItemFieldVal select max(v.idObject)  , f.idField, av.idObject                                   from ItemFieldVal av, ItemField af, Item ai, ItemFieldVal v, ItemField f, Item i where f.name='idActor'     and i.name='SensorAct' and f.idItem = i.idItem and av.idfield = av.idfield and av.val='SendSMS' and af.name='Name' and af.idItem = ai.idItem and ai.name = 'Actor'  group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '@lastVal@ != @prevVal@'                      from ItemFieldVal v, ItemField f, Item i where f.name='Condition'   and i.name='SensorAct' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, 'phone:+123123456789,message:Alarm @lastVal@' from ItemFieldVal v, ItemField f, Item i where f.name='ActorParam'  and i.name='SensorAct' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                                           from ItemFieldVal v, ItemField f, Item i where f.name='IsActive'    and i.name='SensorAct' and f.idItem = i.idItem group by f.nOrder;
 
 
-insert into Item select max(i.idItem)+1, 'Image Sensor', 1, 5, 0, '' from Item i;
 insert into ItemField select max(f.idField)+1, i.idItem, 1,               'ImgFileName', 4, 'Icone for sensor', 'URL for icone',              0, 1, '',           'url' from ItemField f, Item i where i.name='Image Sensor'                         group by i.idItem;
 insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'Name',        4, 'Name',             'sensor name (unique)',       1, 1, '',           ''    from ItemField f, Item i where i.name='Image Sensor' and f.idItem = i.idItem group by i.idItem;
 insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'IdProfil',    2, 'User profil',      'profil for access',          0, 1, 'UserProfil', ''    from ItemField f, Item i where i.name='Image Sensor' and f.idItem = i.idItem group by i.idItem;

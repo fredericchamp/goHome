@@ -125,7 +125,8 @@ func (obj HomeObject) getStrVal(fieldName string) (value string, err error) {
 }
 
 // ValidateValues : check values are valid regarding obj.Fields
-func (obj HomeObject) ValidateValues(values []ItemFieldVal) (err error) { // TODO
+// TODO HomeObject.ValidateValues
+func (obj HomeObject) ValidateValues(values []ItemFieldVal) (err error) {
 	return
 }
 
@@ -147,7 +148,7 @@ func getLinkedObjects(db *sql.DB, objs []HomeObject) (err error) {
 			return err
 		}
 		for _, linkedObjId := range lstLinkedObjId {
-			linkedObjs, err := getHomeObjects(db, ItemTypeNone, ItemIdNone, linkedObjId)
+			linkedObjs, err := getHomeObjects(db, ItemIdNone, linkedObjId)
 			if err != nil {
 				return err
 			}
@@ -165,7 +166,7 @@ func getLinkedObjects(db *sql.DB, objs []HomeObject) (err error) {
 // If idObject > 0 return object with Id = idObject
 // Else if idItem > 0 return all objects for Item definition idItem
 // Else Return all objects for ItemType idItemType
-func getHomeObjects(db *sql.DB, idItemType TItemType, idItem TItemId, idObject int) (objs []HomeObject, err error) {
+func getHomeObjects(db *sql.DB, idItem TItemId, idObject int) (objs []HomeObject, err error) {
 	if db == nil {
 		if db, err = openDB(); err != nil {
 			return
@@ -214,8 +215,7 @@ func getHomeObjects(db *sql.DB, idItemType TItemType, idItem TItemId, idObject i
 
 	} else {
 
-		// get all items for idItemType
-		items, err1 := getManageItems(db, idItemType, ItemIdNone)
+		items, err1 := getManageItems(db, ItemIdNone)
 		if err1 != nil {
 			err = err1
 			return
@@ -223,7 +223,7 @@ func getHomeObjects(db *sql.DB, idItemType TItemType, idItem TItemId, idObject i
 
 		// for each item, read objects
 		for _, item := range items {
-			lstObjs, err1 := getHomeObjects(db, ItemTypeNone, item.IdItem, -1)
+			lstObjs, err1 := getHomeObjects(db, item.IdItem, -1)
 			if err1 != nil {
 				err = err1
 				return

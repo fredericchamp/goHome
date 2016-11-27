@@ -27,10 +27,10 @@ const (
 // -----------------------------------------------
 
 var sensorTickersLock sync.Mutex
-var sensorTickers = map[string]*time.Ticker{}
+var sensorTickers = map[int]*time.Ticker{}
 
 var sensorPrevValLock sync.Mutex
-var sensorPrevVal = map[string]string{}
+var sensorPrevVal = map[int]string{}
 
 // -----------------------------------------------
 
@@ -43,7 +43,7 @@ func init() {
 // sensorSetup : read defined sensors from DB then create a ticker and start reading goroutine for each sensor
 func sensorSetup(db *sql.DB) (err error) {
 
-	sensorObjs, err := getHomeObjects(db, ItemSensor, ItemIdNone, -1)
+	sensorObjs, err := getHomeObjects(db, ItemSensor, -1)
 	if err != nil {
 		return
 	}
@@ -51,54 +51,60 @@ func sensorSetup(db *sql.DB) (err error) {
 		glog.Info("\nSensor Objs\n", sensorObjs)
 	}
 
-	sensorTickersLock.Lock()
-	defer sensorTickersLock.Unlock()
-
 	for _, sensor := range sensorObjs {
-
-		if glog.V(3) {
-			glog.Info("Sensor Values", sensor.Values)
-		}
-		isActive, err := sensor.getIntVal("IsActive")
-		if err != nil {
-			return err
-		}
-		if isActive == 0 {
-			continue
-		}
-
-		sensorName, err := sensor.getStrVal("Name")
-		if err != nil {
-			return err
-		}
-
-		durationStr, err := sensor.getStrVal("Interval")
-		if err != nil {
-			return err
-		}
-
-		// for empty duration, dont setup ticker
-		if len(strings.Trim(durationStr, " ")) <= 0 {
-			continue
-		}
-
-		duration, err := time.ParseDuration(durationStr)
-		if err != nil {
-			glog.Errorf("Falied to parse duration (%s) : %s", durationStr, err)
-			return err
-		}
-
-		if glog.V(2) {
-			glog.Infof("Sensor %s (#Act=%d) / %s => New Ticker (%d)", sensorName, len(sensor.linkedObjs), durationStr, duration)
-		}
-		sensorTickers[sensorName] = time.NewTicker(duration)
-
-		go readSensor(sensor)
+		sensorUpdateTicker(sensor)
 	}
 
 	if glog.V(1) {
 		glog.Infof("sensorSetup Done (%d)", len(sensorTickers))
 	}
+
+	return
+}
+
+func sensorUpdateTicker(sensor HomeObject) (err error) {
+	sensorTickersLock.Lock()
+	defer sensorTickersLock.Unlock()
+
+	if glog.V(3) {
+		glog.Info("Sensor Values", sensor.Values)
+	}
+
+	// If sensor already active, stop it
+	ticker, exist := sensorTickers[sensor.Values[0].IdObject]
+	if exist {
+		ticker.Stop()
+		delete(sensorTickers, sensor.Values[0].IdObject)
+	}
+
+	isActive, err := sensor.getIntVal("IsActive")
+	if err != nil || isActive == 0 {
+		return
+	}
+
+	durationStr, err := sensor.getStrVal("Interval")
+	if err != nil {
+		return
+	}
+
+	// for empty duration, don't setup ticker
+	if len(strings.Trim(durationStr, " ")) <= 0 {
+		return
+	}
+
+	duration, err := time.ParseDuration(durationStr)
+	if err != nil {
+		glog.Errorf("Falied to parse duration (%s) : %s", durationStr, err)
+		return
+	}
+
+	if glog.V(2) {
+		glog.Infof("Sensor %d (#Act=%d) / %s => New Ticker (%d)", sensor.Values[0].IdObject, len(sensor.linkedObjs), durationStr, duration)
+	}
+
+	sensorTickers[sensor.Values[0].IdObject] = time.NewTicker(duration)
+
+	go readSensor(sensor)
 
 	return
 }
@@ -116,8 +122,8 @@ func sensorCleanup() {
 	}
 }
 
-// readSensor : perform sensor readings
-func readSensoValue(sensor HomeObject) (result string, err error) {
+// readSensorValue : perform sensor readings
+func readSensorValue(sensor HomeObject) (result string, err error) {
 	readCmd, err := sensor.getStrVal("ReadCmd")
 	if err != nil {
 		return
@@ -132,26 +138,22 @@ func readSensoValue(sensor HomeObject) (result string, err error) {
 	}
 
 	if isInternal != 0 {
-		return CallInternalFunc(SensorFunc, readCmd, readParam, "")
+		result, err = CallInternalFunc(SensorFunc, readCmd, readParam, "")
+	} else {
+		result, err = LaunchExternalCmd(SensorFunc, readCmd, readParam, "")
 	}
 
-	return LaunchExternalCmd(SensorFunc, readCmd, readParam, "")
-
+	return
 }
 
-// readSensor : call readSensoValue according to initialised corresponding ticker and handleSensorValue
+// readSensor : call readSensorValue according to initialised corresponding ticker and handleSensorValue
 func readSensor(sensor HomeObject) {
-	sensorName, err := sensor.getStrVal("Name")
-	if err != nil {
-		return
-	}
-
 	sensorTickersLock.Lock()
-	localTicker := sensorTickers[sensorName]
+	localTicker := sensorTickers[sensor.Values[0].IdObject]
 	sensorTickersLock.Unlock()
 
 	for t := range localTicker.C {
-		result, err := readSensoValue(sensor)
+		result, err := readSensorValue(sensor)
 		if err != nil {
 			continue
 		}
@@ -173,11 +175,11 @@ func handleSensorValue(t time.Time, sensor HomeObject, value string) {
 
 	// Previous value
 	sensorPrevValLock.Lock()
-	prevVal, found := sensorPrevVal[sensorName]
+	prevVal, found := sensorPrevVal[sensor.Values[0].IdObject]
 	if !found {
 		prevVal = value // todo get prev val from db ?
 	}
-	sensorPrevVal[sensorName] = value
+	sensorPrevVal[sensor.Values[0].IdObject] = value
 	sensorPrevValLock.Unlock()
 
 	// Record value if required
