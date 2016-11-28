@@ -37,6 +37,28 @@ var fc = new Object({
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
 
+function getReadForItemId( itemId ) {
+    switch (itemId) {
+    case 1: return cReadUsers;
+    case 2: return cReadSensor;
+    case 3: return cReadActors;
+    case 4: return cReadSensorAct;
+    case 5: return cReadImgSensor;
+    default:return 0;
+    }
+}
+
+function getItemIdForRead( action ) {
+    switch (action) {
+    case cReadUsers:     return 1;
+    case cReadSensor:    return 2;
+    case cReadActors:    return 3;
+    case cReadSensorAct: return 4;
+    case cReadImgSensor: return 5;
+    default :            return 0;
+    }
+}
+
 function objectListForItemId(itemId) {
     switch (itemId) {
     case 1: return fc.userList;
@@ -58,6 +80,19 @@ function htmlEncode(str) {
         result+=(chrcode>128) ? "&#"+chrcode+";" : str.substr(i,1)
     }
     return result;
+}
+
+// -----------------------------------------------------------------------------------------------------------------------------------------
+
+function formatUnixTs(unixts) {
+    if ( unixts == 0 ) {
+        return '/';
+    }
+    var now = new Date();
+    var dt = new Date(unixts);
+    if ( dt.getDate() != now.getDate() )
+        return dt.getFullYear() + '-' + dt.getMonth() + '-' + dt.getDate();
+    return ('0'+dt.getHours()).slice(-2) + ':' + ('0'+dt.getMinutes()).slice(-2) + ':' + ('0'+dt.getSeconds()).slice(-2);
 }
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
@@ -194,25 +229,21 @@ function searchObjByVal(objLst,itemId,objId,key,val){
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
 
-function getReadForItemId( itemId ) {
-    switch (itemId) {
-    case 1: return cReadUsers;
-    case 2: return cReadSensor;
-    case 3: return cReadActors;
-    case 4: return cReadSensorAct;
-    case 5: return cReadImgSensor;
-    default:return 0;
-    }
-}
-
-function getItemIdForRead( action ) {
-    switch (action) {
-    case cReadUsers:     return 1;
-    case cReadSensor:    return 2;
-    case cReadActors:    return 3;
-    case cReadSensorAct: return 4;
-    case cReadImgSensor: return 5;
-    default :            return 0;
+function getObjectName(obj) {
+    if ( obj == null ) return 'null';
+    switch (obj.Fields[0].IdItem) {
+    case 1: // User
+        return getObjVal(obj,"FirstName") + ' ' + getObjVal(obj,"LastName") + ' (' + getObjVal(obj,"Email") + ')';
+    case 2: // Sensor;
+    case 3: // Actors;
+    case 5: // ImgSensor;
+        return getObjVal(obj,"Name");
+    case 4: // SensorAct
+        return getObjVal(getObjById(fc.sensorList,getObjVal(obj,"idMasterObj")),"Name") + " to " +
+               getObjVal(getObjById(fc.actorList,getObjVal(obj,"idActor")),"Name") + " on '" +
+               htmlEncode(getObjVal(obj,"Condition")) + "'";
+    default:
+        return 'Object_' + obj.Values[0].IdObject ;
     }
 }
 
@@ -262,7 +293,7 @@ function callServer(action,forceRefresh,cmde){
         case cReadUsers:
             // TODO check if data != '{"error":"....."}'
             fc.userList = $.parseJSON(data);
-            showGohHeader();
+            gohHeader();
             break;
         case cReadCurrentUser:
             // TODO check if data != '{"error":"....."}'
@@ -275,12 +306,12 @@ function callServer(action,forceRefresh,cmde){
                 fc.refList = new Object();
             }
             fc.refList['ActorList'] = refListFromNames('ActorList', fc.actorList);
-            showGohActors();
+            gohActors();
             break;
         case cReadImgSensor:
             // TODO check if data != '{"error":"....."}'
             fc.imgSensorList = $.parseJSON(data);
-            showGohImgSensors();
+            gohImgSensors();
             break;
         case cReadSensor:
             // TODO check if data != '{"error":"....."}'
@@ -293,6 +324,7 @@ function callServer(action,forceRefresh,cmde){
                 fc.refList = new Object();
             }
             fc.refList['SensorList'] = refListFromNames('SensorList', fc.sensorList);
+            gohSensorTr();
             break;
         case cReadSensorVal:
             // TODO check if data != '{"error":"....."}'
@@ -300,6 +332,7 @@ function callServer(action,forceRefresh,cmde){
             var sensor = getObjById(fc.sensorList,cmde.objectid);
             sensor.Ts = sensorVal.Ts;
             sensor.Val = sensorVal.Val;
+            gohSensorTd(sensor.Values[0].IdObject, getObjVal(sensor,"Name"), sensor.Ts, sensor.Val, true);
             break;
         case cReadSensorAct:
             // TODO check if data != '{"error":"....."}'
@@ -324,6 +357,7 @@ function callServer(action,forceRefresh,cmde){
         gStartup.loadGot++;
         if (gStartup.startup==false && gStartup.loadAsk <= gStartup.loadGot) {
             fc.initLoadDone=true;
+            gohAdminTab();
         }
         if ( forceRefresh ) {
             //vm.$forceUpdate();
@@ -333,14 +367,14 @@ function callServer(action,forceRefresh,cmde){
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
 
-function showGohHeader() {
+function gohHeader() {
     $("#goh-header").html("Welcome " + getObjVal(fc.currentUser,"FirstName") + ' (' + getObjVal(fc.currentUser,"Email") + ')');
 }
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
 // goh-actors
 
-function showGohActors() {
+function gohActors() {
     var html = '';
     var i = 0;
     for (i = 0; i < fc.actorList.length; i++) {
@@ -376,7 +410,7 @@ console.log( fc.actorList[idx].Values[0].IdObject + '-' + jparam );
 // -----------------------------------------------------------------------------------------------------------------------------------------
 // goh-isensor
 
-function showGohImgSensors() {
+function gohImgSensors() {
     var html = '';
     var i = 0;
     for (i = 0; i < fc.imgSensorList.length; i++) {
@@ -398,60 +432,158 @@ function hideImgSensorReading() {
     $('#imgsensorsrc').attr('src', '' );
     $('#imgsensor').hide();
 }
-// -----------------------------------------------------------------------------------------------------------------------------------------
 
+// -----------------------------------------------------------------------------------------------------------------------------------------
+// goh-sensor-row
+
+function gohSensorTd(sensorId,sensorName,readTs,readVal,update) {
+    var html = '';
+    html = html + '<td>' + sensorId + '</td>';
+    html = html + '<td>' + sensorName + '</td>';
+    html = html + '<td>' + readVal + '</td>';
+    html = html + '<td>' + formatUnixTs(readTs) + '</td>';
+    if ( update ) {
+        $("#gohsensorrow_"+sensorId).html(html);
+    }
+    return html;
+}
+
+function gohSensorTr() {
+    var html = '';
+    var i = 0;
+    for (i = 0; i < fc.sensorList.length; i++) {
+        var objid = fc.sensorList[i].Values[0].IdObject;
+        html = html + '<tr id="gohsensorrow_' + objid + '" onclick="readSensorVal(' + objid + ')" >';
+        html = html + gohSensorTd(objid, getObjVal(fc.sensorList[i],"Name"), fc.sensorList[i].Ts, fc.sensorList[i].Val,false);
+        html = html + '</tr>';
+    }
+    for (i = 0; i < fc.sensorList.length; i++) {
+        readSensorVal(fc.sensorList[i].Values[0].IdObject);
+    }
+    $("#goh-sensor-row").html(html);
+}
+
+
+function readSensorVal(sensorId) {
+    callServer(cReadSensorVal,true,{command:'ReadSensor', itemid:0, objectid:sensorId, startts:0, endts:0, jsonparam:''});
+}
+
+// -----------------------------------------------------------------------------------------------------------------------------------------
+// goh-admin-tab
+
+
+
+function gohAdminTab() {
+    var html = '';
+    var i = 0;
+    for (i = 0; i < fc.itemList.length; i++) {
+        var itemDivId = 'item_' + fc.itemList[i].IdItem;
+        html = html + '<div class="panel panel-default">';
+        html = html + '<div class="panel-heading" data-toggle="collapse" data-parent="#admin_list" data-target="#' + itemDivId + '">';
+        html = html + '<h4 class="panel-title">' + fc.itemList[i].Name + '</h4>';
+        html = html + '</div>';
+        html = html + '<div id="' + itemDivId + '" class="panel-collapse collapse">';
+        html = html + '<div class="panel-body">';
+        html = html + '<ul class="list-group">';
+        html = html + gohAdminObjLst(fc.itemList[i].IdItem,fc.itemList[i].Name);
+        html = html + '</ul></div></div></div>';
+    }
+    $("#goh-admin-tab").html(html);
+}
+
+
+function gohAdminObjLst(itemId,itemName) {
+    var html = '';
+    var i = 0;
+    var objLst = objectListForItemId(itemId);
+    if ( objLst == null ) {
+        html = html + 'ERROR gohAdminObjLst : objLst=null ';
+    } else {
+        for (i = 0; i < objLst.length; i++) {
+            html = html + '<li class="list-group-item" style="padding:0px;">';
+            html = html + '<div onclick="gohAdminEditObj(\'' + itemName + '\',' + itemId + ',' + objLst[i].Values[0].IdObject + ');" style="padding:5px;">';
+            html = html + getObjectName(objLst[i]);
+            html = html + '</div></li>';
+        }
+    }
+    if ( itemName != null && itemName.length > 0 ) {
+        html = html + '<li class="list-group-item" style="padding:0px;">';
+        html = html + '<div onclick="gohAdminEditObj(\'' + itemName + '\',' + itemId + ',0);" style="padding:5px;">';
+        html = html + '<span class="glyphicon glyphicon-plus"></span> New ' + itemName;
+        html = html + '</div></li>';
+    }
+    return html;
+}
+
+// ---------------------------
+// global var for object edit
+
+var curObjAdminEdit = null;
+
+// ---------------------------
+
+
+function gohAdminEditObj(itemName,itemId,objectId) {
+    var html = '';
+    html = html + '<div class="form-panel"><div class="panel panel-default">';
+    html = html + '<div class="panel-heading">' + itemName + '</div>';
+    html = html + '<div class="panel-body"><form class="form-horizontal">';
+
+    var objLst = objectListForItemId(itemId);
+    if ( objLst == null ) {
+        html = html + 'gohAdminEditObj : ERROR objLst=null ';
+    } else {
+        if ( objectId == 0 ) {
+            curObjAdminEdit = newHomeObject(objLst[0])
+        }
+        curObjAdminEdit = getObjById(objLst, objectId );
+    }
+    if ( curObjAdminEdit == null ) {
+        html = html + 'gohAdminEditObj : ERROR curObjAdminEdit=null ';
+    } else {
+        var i = 0;
+        for (i = 0; i < curObjAdminEdit.Fields.length; i++) {
+            html = html + '<span style="font-size: 0.7em;">';
+            html = html + gohAdminEditField(i);
+            html = html + '</span>';
+        }
+    }
+    html = html + '</form></div>';
+    html = html + '<div class="panel-footer">';
+    html = html + '<button type="button" class="btn btn-default" onclick="adminSaveObj()">Save</button>';
+    html = html + '<button type="button" class="btn btn-default" onclick="adminCancelEdit()">Cancel</button>';
+    html = html + '</div>';
+    html = html + '</div></div>';
+
+    $("#goh-admin-edit-object").html(html);
+    $("#goh-admin-edit-object").attr("class", 'gray-out-page');
+
+}
+
+function adminCancelEdit() {
+    curObjAdminEdit = null;
+    $("#goh-admin-edit-object").attr("class", 'hide');
+}
+
+function adminSaveObj() {
+    curObjAdminEdit = null;
+    $("#goh-admin-edit-object").attr("class", 'hide');
+}
+
+function gohAdminEditField(idx) {
+    var html = '';
+    html = html + curObjAdminEdit.Fields[idx].Name + '<br>';
+    return html;
+}
+
+
+// -----------------------------------------------------------------------------------------------------------------------------------------
 
 $(document).ready(function(){
 
 
 
 /*
-
-
-    Vue.component('goh-isensor-show', {
-        props: ['imgsensorsrc'],
-        template: ' ',
-        methods: {
-            hideImg: function (event) { vm.imgSensorSrc = '';  }
-            // TODO : add button to Save img
-        }
-    });
-
-
-
-
-
-    Vue.component('goh-sensors-row', {
-        props: {
-            sensor:null,
-            readvalue: '',
-            readdate: ''
-        },
-        template: ' <tr @click="updateval">\
-                    <td>{{sensor.Values[0].IdObject}}</td><td>{{getObjVal(sensor,"Name")}}</td><td>{{readvalue}}</td><td>{{showdate}}</td>\
-                    </tr>',
-        computed: {
-            showdate:function () {
-                if (this.readdate == 0) {
-                    this.updateval();
-                    return '/';
-                }
-                var now = new Date();
-                var dt = new Date(this.readdate);
-                if ( dt.getDate() != now.getDate() )
-                    return dt.getFullYear() + '-' + dt.getMonth() + '-' + dt.getDate();
-                return ('0'+dt.getHours()).slice(-2) + ':' + ('0'+dt.getMinutes()).slice(-2) + ':' + ('0'+dt.getSeconds()).slice(-2);
-            }
-        },
-        methods: {
-            updateval: function () {
-                var objid=this.sensor.Values[0].IdObject;
-                callServer(cReadSensorVal,true,{command:'ReadSensor', itemid:0, objectid:objid, startts:0, endts:0, jsonparam:''});
-            }
-        }
-    });
-
-
 
     Vue.component('goh-obj-edit-field', {
         props: {
@@ -595,24 +727,6 @@ $(document).ready(function(){
             itemidname: function () {
                 return getItemNameById( vm.itemList, this.homeobj.Fields[0].IdItem );
             },
-            name:function () {
-                var name = getObjVal(this.homeobj,"Name");
-                if ( name == '' && this.homeobj.Values[0].IdObject == 0 ) {
-                    name = 'New ' + this.itemidname ;
-                }
-                if ( name == '' && getObjVal(this.homeobj,"FirstName") != '' ) {
-                    name = getObjVal(this.homeobj,"FirstName") + ' ' + getObjVal(this.homeobj,"LastName") + ' (' + getObjVal(this.homeobj,"Email") + ')';
-                }
-                if ( name == '' && getObjVal(this.homeobj,"idMasterObj") != '' ) {
-                    name = getObjVal(getObjById(vm.sensorList,getObjVal(this.homeobj,"idMasterObj")),"Name") + " to " +
-                        getObjVal(getObjById(vm.actorList,getObjVal(this.homeobj,"idActor")),"Name") + " on '" +
-                        htmlEncode(getObjVal(this.homeobj,"Condition")) + "'";
-                }
-                if ( name == '' ) {
-                    name = 'Object_' + this.homeobj.Values[0].IdObject ;
-                }
-                return name;
-            },
             getEditobj:function () {
                 if ( this.editobj == null ) {
                     var obj = new Object;
@@ -650,41 +764,6 @@ $(document).ready(function(){
         }
     });
 
-
-
-
-    Vue.component('goh-admin-tab', {
-        props: {
-            objlist:null
-        },
-        template: ' <div class="panel panel-default">\
-                        <div class="panel-heading" data-toggle="collapse" data-parent="#admin_list" :data-target="\'#\'+divid">\
-                            <h4 class="panel-title">{{itemidname}}</h4>\
-                        </div>\
-                        <div :id="divid" class="panel-collapse collapse">\
-                            <div class="panel-body">\
-                                <ul class="list-group">\
-                                    <goh-admin-obj v-for="i in objlist" :homeobj="i" ></goh-admin-obj>\
-                                    <goh-admin-obj :homeobj="homeobj" ></goh-admin-obj>\
-                                </ul>\
-                            </div>\
-                        </div>\
-                    </div>',
-        computed: {
-            itemidname: function () {
-                if ( this.objlist == null ) return 'lst null';
-                if ( this.objlist[0].Fields == null ) return 'fields null';
-                return getItemNameById( vm.itemList, this.objlist[0].Fields[0].IdItem );
-            },
-            divid: function() {
-                return 'admin_' + this.itemidname.replace(/ /g,"_");
-            },
-            homeobj: function() {
-                if ( this.objlist == null ) return null;
-                return newHomeObject(this.objlist[0])
-            }
-        }
-    });
 */
 // -----------------------------------------------------------------------------------------------------------------------------------------
 

@@ -46,9 +46,7 @@
 			<div id="menu2" class="tab-pane fade">
 				<div class="table-responsive"><table class="table">
 				<thead><tr><th>Id</th><th>Nom</th><th>Valeur</th><th>Date</th></tr></thead>
-				<tbody>
-<!--					<tr is="goh-sensors-row" v-for="i in vm.sensorList" :sensor="i" :readvalue="i.Val" :readdate="i.Ts"></tr>-->
-					goh-sensors-row
+				<tbody id="goh-sensor-row">
 				</tbody></table></div> <!-- TODO ignore inactive sensor -->
 			</div>
 
@@ -56,10 +54,7 @@
 
 			<div id="menu3" class="tab-pane fade">
 				<br>
-				<div class="panel-group" id="admin_list">
-<!--					<goh-admin-tab v-for="i in itemList" :objlist="objectListForItemId(i.IdItem)" ></goh-admin-tab>-->
-					goh-admin-tab
-				</div>
+				<div id="goh-admin-tab" class="panel-group" id="admin_list"></div>
 			</div>
 
 <!-- ---------------------------------------------------------------------------------------------------------------------------------- -->
@@ -72,6 +67,8 @@
 	<div id="gohMessage" class="panel panel-info hide" onclick="$('#gohMessage').attr('class', 'hide' );">
 		<div id="gohMessageText" class="panel-heading"></div>
 	</div>
+
+	<div id="goh-admin-edit-object" class="hide"></div>
 
 	</div>
 </div>
