@@ -20,10 +20,7 @@ const DBTypeDateTime   = 5;
 const DBTypeURL        = 6;
 
 
-var gStartup            = { startup:true, loadAsk:0, loadGot:0 } ;
-
 var fc = new Object({
-    initLoadDone: false,
     refList: null,
     itemList: null,
     currentUser: null,
@@ -34,6 +31,8 @@ var fc = new Object({
     imgSensorList: null,
     imgSensorSrc: '',
 });
+
+// TODO create methods on fc to handle xxxList update with relevant GUI update
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -97,20 +96,6 @@ function formatUnixTs(unixts) {
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
 
-function showMessage(message,msgtype,delay){
-    curClass = 'panel panel-info goh-msg';
-    if ( msgtype != null && msgtype.length > 0) {
-        curClass = 'panel panel-' + msgtype + " goh-msg" ;
-    }
-    if (delay!=null && delay >0) {
-        setTimeout(function() { $('#gohMessage').attr("class", "hide" ); }, delay);
-    }
-    $('#gohMessage').attr("class", curClass ) ;
-    $('#gohMessageText').html(message);
-}
-
-// -----------------------------------------------------------------------------------------------------------------------------------------
-
 function refListGetVal( refList, lstname, code ) {
     if ( refList == null ) return '';
     var i = 0;
@@ -131,7 +116,7 @@ function refListFromNames( listName, objList ) {
     var i = 0;
     for (i = 0; i < objList[0].Fields.length; i++) {
         if ( objList[0].Fields[i].Name == 'Name' ) {
-            nameIdx = i; // TODO should use IdField rather than index
+            nameIdx = i;
             break;
         }
     }
@@ -164,10 +149,10 @@ function getItemNameById( itemList, itemId ) {
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
 
-function newHomeObject(obj) {
-    if ( obj == null ) return null;
+function newHomeObject(fields) {
+    if ( fields == null ) return null;
     var newObj = new Object();
-    newObj.Fields = obj.Fields;
+    newObj.Fields = fields;
     newObj.Values = new Array();
     var i;
     for (i = 0; i < newObj.Fields.length; i++) {
@@ -249,21 +234,18 @@ function getObjectName(obj) {
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
 
-function readObjectLst( action, forceRefresh ) {
+function readObjectLst( action ) {
    var itemId = getItemIdForRead( action );
     if ( itemId <= 0 ) {
         // TODO ERROR unknown itemId or action
         return;
     }
-    callServer(action,forceRefresh,{ command:'ReadObject', itemid:itemId, objectid:0, startts:0, endts:0, jsonparam:'' });
+    callServer(action, { command:'ReadObject', itemid:itemId, objectid:0, startts:0, endts:0, jsonparam:'' });
 }
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
 
-function callServer(action,forceRefresh,cmde){
-    if ( gStartup.startup ) {
-        gStartup.loadAsk++;
-    }
+function callServer(action,cmde){
     $.post("/api", { command:$.toJSON(cmde) }, function(data, status){
         switch (action) {
         case cReadRefList:
@@ -293,11 +275,12 @@ function callServer(action,forceRefresh,cmde){
         case cReadUsers:
             // TODO check if data != '{"error":"....."}'
             fc.userList = $.parseJSON(data);
-            gohHeader();
+            gohAdminTab();
             break;
         case cReadCurrentUser:
             // TODO check if data != '{"error":"....."}'
             fc.currentUser = $.parseJSON(data);
+            gohHeader();
             break;
         case cReadActors:
             // TODO check if data != '{"error":"....."}'
@@ -307,11 +290,13 @@ function callServer(action,forceRefresh,cmde){
             }
             fc.refList['ActorList'] = refListFromNames('ActorList', fc.actorList);
             gohActors();
+            gohAdminTab();
             break;
         case cReadImgSensor:
             // TODO check if data != '{"error":"....."}'
             fc.imgSensorList = $.parseJSON(data);
             gohImgSensors();
+            gohAdminTab();
             break;
         case cReadSensor:
             // TODO check if data != '{"error":"....."}'
@@ -325,6 +310,7 @@ function callServer(action,forceRefresh,cmde){
             }
             fc.refList['SensorList'] = refListFromNames('SensorList', fc.sensorList);
             gohSensorTr();
+            gohAdminTab();
             break;
         case cReadSensorVal:
             // TODO check if data != '{"error":"....."}'
@@ -337,32 +323,37 @@ function callServer(action,forceRefresh,cmde){
         case cReadSensorAct:
             // TODO check if data != '{"error":"....."}'
             fc.sensorActList = $.parseJSON(data);
+            gohAdminTab();
             break;
         case cSaveObject:
             // TODO check if data != '{"error":"....."}'
-            // TODO if save fail, read original values from server and update corresponding fc.xxxxList to restore valid values ... or reload page :-)
-            if ( forceRefresh ) {
-                setTimeout(function() { readObjectLst( getReadForItemId(cmde.itemid), forceRefresh ); }, 1500);
-                forceRefresh = false;
-            }
+
+            // Reload Objects from server, this will update GUI as well
+            setTimeout(function() { readObjectLst( getReadForItemId(cmde.itemid) ); }, 100);
             break;
         case cTriggerActor:
             // TODO check if data != '{"error":"....."}'
-            showMessage(cmde.command + '(' + data + ')' ,'success',1500);
+            gohMessage(cmde.command + '(' + data + ')' ,'success',1500);
             break;
         default:
-            showMessage('callServer : action inconnue (' + action + ')', 'danger',3000);
+            gohMessage('callServer : action inconnue (' + action + ')', 'danger',3000);
             break;
         }
-        gStartup.loadGot++;
-        if (gStartup.startup==false && gStartup.loadAsk <= gStartup.loadGot) {
-            fc.initLoadDone=true;
-            gohAdminTab();
-        }
-        if ( forceRefresh ) {
-            //vm.$forceUpdate();
-        }
     });
+}
+
+// -----------------------------------------------------------------------------------------------------------------------------------------
+
+function gohMessage(message,msgtype,delay){
+    curClass = 'panel panel-info goh-msg';
+    if ( msgtype != null && msgtype.length > 0) {
+        curClass = 'panel panel-' + msgtype + " goh-msg" ;
+    }
+    if (delay!=null && delay >0) {
+        setTimeout(function() { $('#goh-message').attr("class", "hide" ); }, delay);
+    }
+    $('#goh-message').attr("class", curClass ) ;
+    $('#goh-message').html('<div class="panel-heading">' + message + '</div>');
 }
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
@@ -404,7 +395,7 @@ function actionner(idx) {
         jparam = $("#actorparam_"+idx).val();
     }
 console.log( fc.actorList[idx].Values[0].IdObject + '-' + jparam );
-    callServer(cTriggerActor,false,{ command:'TriggerActor', itemid:0, objectid:fc.actorList[idx].Values[0].IdObject, startts:0, endts:0, jsonparam:jparam });
+    callServer(cTriggerActor,{ command:'TriggerActor', itemid:0, objectid:fc.actorList[idx].Values[0].IdObject, startts:0, endts:0, jsonparam:jparam });
 }
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
@@ -452,6 +443,7 @@ function gohSensorTr() {
     var html = '';
     var i = 0;
     for (i = 0; i < fc.sensorList.length; i++) {
+        // TODO ignore inactive sensor
         var objid = fc.sensorList[i].Values[0].IdObject;
         html = html + '<tr id="gohsensorrow_' + objid + '" onclick="readSensorVal(' + objid + ')" >';
         html = html + gohSensorTd(objid, getObjVal(fc.sensorList[i],"Name"), fc.sensorList[i].Ts, fc.sensorList[i].Val,false);
@@ -465,7 +457,7 @@ function gohSensorTr() {
 
 
 function readSensorVal(sensorId) {
-    callServer(cReadSensorVal,true,{command:'ReadSensor', itemid:0, objectid:sensorId, startts:0, endts:0, jsonparam:''});
+    callServer(cReadSensorVal,{command:'ReadSensor', itemid:0, objectid:sensorId, startts:0, endts:0, jsonparam:''});
 }
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
@@ -479,7 +471,7 @@ function gohAdminTab() {
     for (i = 0; i < fc.itemList.length; i++) {
         var itemDivId = 'item_' + fc.itemList[i].IdItem;
         html = html + '<div class="panel panel-default">';
-        html = html + '<div class="panel-heading" data-toggle="collapse" data-parent="#admin_list" data-target="#' + itemDivId + '">';
+        html = html + '<div class="panel-heading" data-toggle="collapse" data-parent="#goh-admin-tab" data-target="#' + itemDivId + '">';
         html = html + '<h4 class="panel-title">' + fc.itemList[i].Name + '</h4>';
         html = html + '</div>';
         html = html + '<div id="' + itemDivId + '" class="panel-collapse collapse">';
@@ -525,19 +517,21 @@ var curObjAdminEdit = null;
 
 function gohAdminEditObj(itemName,itemId,objectId) {
     var html = '';
-    html = html + '<div class="form-panel"><div class="panel panel-default">';
-    html = html + '<div class="panel-heading">' + itemName + '</div>';
-    html = html + '<div class="panel-body"><form class="form-horizontal">';
-
     var objLst = objectListForItemId(itemId);
     if ( objLst == null ) {
         html = html + 'gohAdminEditObj : ERROR objLst=null ';
     } else {
         if ( objectId == 0 ) {
-            curObjAdminEdit = newHomeObject(objLst[0])
+            // TODO : use Fields from Idem definition rather than an existing HomeObject ... in case we need to create the first obj
+            curObjAdminEdit = newHomeObject(objLst[0].Fields);
+        } else {
+            curObjAdminEdit = getObjById(objLst, objectId );
         }
-        curObjAdminEdit = getObjById(objLst, objectId );
     }
+
+    html = html + '<div class="form-panel"><div class="panel panel-default">';
+    html = html + '<div class="panel-heading">' + itemName + '</div>';
+    html = html + '<div class="panel-body"><form class="form-horizontal">';
     if ( curObjAdminEdit == null ) {
         html = html + 'gohAdminEditObj : ERROR curObjAdminEdit=null ';
     } else {
@@ -550,14 +544,128 @@ function gohAdminEditObj(itemName,itemId,objectId) {
     }
     html = html + '</form></div>';
     html = html + '<div class="panel-footer">';
-    html = html + '<button type="button" class="btn btn-default" onclick="adminSaveObj()">Save</button>';
+    html = html + '<button type="button" class="btn btn-default" onclick="adminSaveObj()">Save</button> ';
     html = html + '<button type="button" class="btn btn-default" onclick="adminCancelEdit()">Cancel</button>';
     html = html + '</div>';
     html = html + '</div></div>';
 
     $("#goh-admin-edit-object").html(html);
+    adminHasError();
     $("#goh-admin-edit-object").attr("class", 'gray-out-page');
 
+}
+
+function gohAdminEditField(idx) {
+    var field = curObjAdminEdit.Fields[idx];
+    var val = curObjAdminEdit.Values[idx];
+    var html = '';
+    html = html + '<div id="admin_div_field_' + field.IdField + '" class="form-group has-feedback">';
+    html = html + '<label class="col-sm-2 control-label" for="admin_field_' + field.IdField + '">' + field.Label + '</label>';
+    html = html + '<div class="col-sm-10">';
+    switch ( htmlfieldtype(field) ) {
+    case 'input':
+        html = html + '<input id="admin_field_' + field.IdField + '" type="' + getinputtype(field) + '" placeholder="' + field.Helper + '" ';
+        html = html + 'oninput="isValidFieldVal(' + idx + ');" class="form-control input-sm" value="' + val.Val + '">';
+        html = html + '<span id="admin_field_ico_' + field.IdField + '" class="glyphicon form-control-feedback"></span>';
+        break;
+    case 'select':
+        html = html + '<select id="admin_field_' + field.IdField + '" placeholder="' + field.Helper + '" onchange="' + isValidFieldVal(idx) + '" ';
+        html = html + 'value="' + val.Val + '" class="form-control">';
+        var i = 0;
+        for (i = 0; i < fc.refList[field.RefList].length; i++) {
+            html = html + '<option value="' + fc.refList[field.RefList][i].Code + '" >' + fc.refList[field.RefList][i].Label + '</option>';
+        }
+        html = html + '</select>';
+        break;
+    default:
+        html = html + 'Unknonw field type : ' + field.IdField + ' / ' + field.Name + '.';
+        break;
+    }
+    html = html + '</div></div>';
+    return html;
+}
+
+function htmlfieldtype(field) {
+    switch (field.IdDataType){
+    case DBTypeInt:
+        if ( field.RefList=='' ) return 'input';
+        return 'select';
+    case DBTypeFloat:
+    case DBTypeText:
+        return 'input';
+    default :
+        return '';
+    }
+}
+
+function getinputtype(field) {
+    switch (field.IdDataType) {
+    case DBTypeInt:
+    case DBTypeFloat:
+        return 'number';
+    default:
+        switch (field.Regexp) {
+        case 'email':
+        case 'tel':
+        case 'password':
+            return field.Regexp;
+        default:
+            return 'text';
+        }
+    }
+}
+
+function isValidFieldVal(idx) {
+    var field = curObjAdminEdit.Fields[idx];
+    var curVal = $('#admin_field_' + field.IdField).val();
+    if ( field.Required  != '0' && curVal == '' ) {
+        $("#admin_div_field_"+field.IdField).attr("class", 'form-group has-feedback has-error');
+        $("#admin_field_ico_"+field.IdField).attr("class", 'glyphicon form-control-feedback glyphicon-remove');
+        curObjAdminEdit.Values[idx]["_v_"] = false;
+console.log('isValidFieldVal('+idx+') a= false ' + field.Required + '-' + curVal );
+        return false;
+    }
+    if ( field.Regexp != '' ) {
+        var pattern = new RegExp(fc.refList[field.Regexp][0].Label,"g");
+        if ( !pattern.test(curVal) ) {
+            $("#admin_div_field_"+field.IdField).attr("class", 'form-group has-feedback has-error');
+            $("#admin_field_ico_"+field.IdField).attr("class", 'glyphicon form-control-feedback glyphicon-remove');
+            curObjAdminEdit.Values[idx]["_v_"] = false;
+console.log('isValidFieldVal('+idx+') b= false ' + field.Regexp + '-' + fc.refList[field.Regexp][0].Label + '-' + curVal );
+            return false;
+        }
+    }
+    if ( field.UniqKey != '0' ) {
+        if ( curVal == '' ) {
+            $("#admin_div_field_"+field.IdField).attr("class", 'form-group has-feedback has-error');
+            $("#admin_field_ico_"+field.IdField).attr("class", 'glyphicon form-control-feedback glyphicon-remove');
+            curObjAdminEdit.Values[idx]["_v_"] = false;
+console.log('isValidFieldVal('+idx+') c= false');
+            return false;
+        } else {
+            if ( searchObjByVal(objectListForItemId(field.IdItem),field.IdItem,curObjAdminEdit.Values[0].IdObject,field.Name,curVal) != null ) {
+                $("#admin_div_field_"+field.IdField).attr("class", 'form-group has-feedback has-error');
+                $("#admin_field_ico_"+field.IdField).attr("class", 'glyphicon form-control-feedback glyphicon-remove');
+                curObjAdminEdit.Values[idx]["_v_"] = false;
+console.log('isValidFieldVal('+idx+') d= false');
+                return false;
+            }
+        }
+    }
+    $("#admin_div_field_"+field.IdField).attr("class", 'form-group has-feedback has-success');
+    $("#admin_field_ico_"+field.IdField).attr("class", 'glyphicon form-control-feedback glyphicon-ok');
+    curObjAdminEdit.Values[idx]["_v_"] = true;
+console.log('isValidFieldVal('+idx+') = true');
+    return true;
+}
+
+function adminHasError() {
+    var hasError = false;
+    var i = 0;
+    for (i = 0; i < curObjAdminEdit.Values.length; i++) {
+        if ( isValidFieldVal(i) != true ) hasError = true;
+    }
+    return hasError;
 }
 
 function adminCancelEdit() {
@@ -566,236 +674,50 @@ function adminCancelEdit() {
 }
 
 function adminSaveObj() {
+    if ( adminHasError() ) {
+        gohMessage('<center><br><br>Bad value(s)</br></br></br></center>', 'danger',3000);
+        return;
+    }
+    var i = 0;
+    for (i = 0; i < curObjAdminEdit.Values.length; i++) {
+        curObjAdminEdit.Values[i].Val = $('#admin_field_' + curObjAdminEdit.Fields[i].IdField).val();
+    }
+
+    callServer(cSaveObject,
+        { command:'SaveObject', itemid:curObjAdminEdit.Fields[0].IdItem, objectid:0, startts:0, endts:0, jsonparam: $.toJSON(curObjAdminEdit) });
+
     curObjAdminEdit = null;
     $("#goh-admin-edit-object").attr("class", 'hide');
 }
-
-function gohAdminEditField(idx) {
-    var html = '';
-    html = html + curObjAdminEdit.Fields[idx].Name + '<br>';
-    return html;
-}
-
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
 
 $(document).ready(function(){
 
-
-
-/*
-
-    Vue.component('goh-obj-edit-field', {
-        props: {
-            field:null,
-            vals:null
-        },
-        template: ' <div :id="\'div_\'+field.Name" class="form-group has-feedback">\
-                        <label class="col-sm-2 control-label" :for="field.Name"> {{field.Label}} </label>\
-                        <div class="col-sm-10">\
-                            <span v-if="(htmlfieldtype(field)==\'input\')">\
-                                <input v-model="vals[field.Name]" :type="getinputtype(field)" :id="field.Name" :placeholder="field.Helper" \
-                                @input="isvalid(field,$event.target.value)" class="form-control input-sm">\
-                                <span :id="\'ico_\'+field.Name" class="glyphicon form-control-feedback"></span>\
-                            </span>\
-                            <span v-if="(htmlfieldtype(field)==\'select\')">\
-                                <select v-model="vals[field.Name]" :id="field.Name" @input="isvalid(field,$event.target.value)" :placeholder="field.Helper" class="form-control">\
-                                    <option v-for="oneVal in vm.refList[field.RefList]" :value="oneVal.Code" >{{oneVal.Label}}</option>\
-                                </select>\
-                            </span>\
-                        </div>\
-                    </div>',
-        mounted: function () {
-            this.isvalid(this.field,this.vals[this.field.Name]);
-        },
-        methods: {
-            isvalid: function (field,curVal) {
-                if ( field.Required  != '0' && curVal == '' ) {
-                    $("#div_"+field.Name).attr("class", 'form-group has-feedback has-error');
-                    $("#ico_"+field.Name).attr("class", 'glyphicon form-control-feedback glyphicon-remove');
-                    this.vals["_v_"+field.Name] = false;
-                    return false;
-                }
-                if ( field.Regexp != '' ) {
-                    var pattern = new RegExp(vm.refList[field.Regexp][0].Label,"g");
-                    if ( !pattern.test(curVal) ) {
-                        $("#div_"+field.Name).attr("class", 'form-group has-feedback has-error');
-                        $("#ico_"+field.Name).attr("class", 'glyphicon form-control-feedback glyphicon-remove');
-                        this.vals["_v_"+field.Name] = false;
-                        return false;
-                    }
-                }
-                if ( field.UniqKey != '0' ) {
-                    if ( curVal == '' ) {
-                        $("#div_"+field.Name).attr("class", 'form-group has-feedback has-error');
-                        $("#ico_"+field.Name).attr("class", 'glyphicon form-control-feedback glyphicon-remove');
-                        this.vals["_v_"+field.Name] = false;
-                        return false;
-                    } else {
-                        var find = false;
-                        switch (field.IdItem) {
-                        case vm.userList[0].Fields[0].IdItem:
-                            find = (searchObjByVal(vm.userList,field.IdItem,this.vals.IdObject,field.Name,curVal) != null) ;
-                            break;
-                        case vm.actorList[0].Fields[0].IdItem:
-                            find = (searchObjByVal(vm.actorList,field.IdItem,this.vals.IdObject,field.Name,curVal) != null) ;
-                            break;
-                        case vm.sensorList[0].Fields[0].IdItem:
-                            find = (searchObjByVal(vm.sensorList,field.IdItem,this.vals.IdObject,field.Name,curVal) != null) ;
-                            break;
-                        case vm.sensorActList[0].Fields[0].IdItem:
-                            find = (searchObjByVal(vm.sensorActList,field.IdItem,this.vals.IdObject,field.Name,curVal) != null) ;
-                            break;
-                        case vm.imgSensorList[0].Fields[0].IdItem:
-                            find = (searchObjByVal(vm.imgSensorList,field.IdItem,this.vals.IdObject,field.Name,curVal) != null) ;
-                            break;
-                        default:
-                            find = false ;
-                        }
-                        if ( find ) {
-                            $("#div_"+field.Name).attr("class", 'form-group has-feedback has-error');
-                            $("#ico_"+field.Name).attr("class", 'glyphicon form-control-feedback glyphicon-remove');
-                            this.vals["_v_"+field.Name] = false;
-                            return false;
-                        }
-                    }
-                }
-                $("#div_"+field.Name).attr("class", 'form-group has-feedback has-success');
-                $("#ico_"+field.Name).attr("class", 'glyphicon form-control-feedback glyphicon-ok');
-                this.vals["_v_"+field.Name] = true;
-                return true;
-            },
-            htmlfieldtype: function (field) {
-                switch (field.IdDataType){
-                case DBTypeInt:
-                    if ( field.RefList=='' ) return 'input';
-                    return 'select';
-                case DBTypeFloat:
-                case DBTypeText:
-                    return 'input';
-                default :
-                    return '';
-                }
-            },
-            getinputtype: function (field) {
-                switch (field.IdDataType) {
-                case DBTypeInt:
-                case DBTypeFloat:
-                    return 'number';
-                default:
-                    switch (field.Regexp) {
-                    case 'email':
-                    case 'tel':
-                    case 'password':
-                        return field.Regexp;
-                    default:
-                        return 'text';
-                    }
-                }
-            }
-        }
-    });
-
-
-
-    Vue.component('goh-admin-obj', {
-        props: {
-            showmodalform:false,
-            editobj:null,
-            homeobj:null
-        },
-        template: ' <li class="list-group-item" style="padding:0px;">\
-                        <div @click="showmodalform=true;" style="padding:5px;">\
-                            <span v-if="homeobj.Values[0].IdObject == 0" class="glyphicon glyphicon-plus"></span> {{name}}\
-                        </div>\
-                        <div class="gray-out-page" v-if="showmodalform==true"><div class="form-panel">\
-                            <div class="panel panel-default">\
-                                <div class="panel-heading">{{itemidname}}</div>\
-                                <div class="panel-body">\
-                                    <form class="form-horizontal"><span v-for="(field, idx) in homeobj.Fields"  style="font-size: 0.7em;">\
-                                        <goh-obj-edit-field :field="field" :vals="getEditobj"></goh-obj-edit-field>\
-                                    </span></form>\
-                                </div>\
-                                <div class="panel-footer">\
-                                    <button type="button" class="btn btn-default" @click="this.saveObj">Save</button>\
-                                    <button type="button" class="btn btn-default" @click="this.cancelEdit">Cancel</button>\
-                                </div>\
-                            </div>\
-                        </div></div>\
-                    </li>',
-        computed: {
-            itemidname: function () {
-                return getItemNameById( vm.itemList, this.homeobj.Fields[0].IdItem );
-            },
-            getEditobj:function () {
-                if ( this.editobj == null ) {
-                    var obj = new Object;
-                    for ( idx = 0; idx < this.homeobj.Fields.length; idx++ ) {
-                        obj[this.homeobj.Fields[idx].Name] = this.homeobj.Values[idx].Val;
-                    }
-                    obj.IdObject = this.homeobj.Values[0].IdObject;
-                    this.editobj = obj;
-                }
-                return this.editobj;
-            }
-        },
-        methods: {
-            cancelEdit: function() {
-                this.editobj = null;
-				this.showmodalform=false;
-            },
-            saveObj: function() {
-                for ( idx = 0; idx < this.homeobj.Fields.length; idx++ ) {
-                    if ( this.editobj["_v_"+this.homeobj.Fields[idx].Name] == false ) {
-                        showMessage('<center><br><br>Bad value(s)</br></br></br></center>', 'danger',3000);
-                        return;
-                    }
-                }
-                for ( idx = 0; idx < this.homeobj.Fields.length; idx++ ) {
-                    this.homeobj.Values[idx].Val = this.editobj[this.homeobj.Fields[idx].Name]
-                }
-                // SaveObject
-                callServer(cSaveObject, (this.homeobj.Values[0].IdObject == '0'),
-                    { command:'SaveObject', itemid:this.homeobj.Fields[0].IdItem, objectid:0, startts:0, endts:0,
-                        jsonparam: $.toJSON(this.homeobj) });
-
-				this.showmodalform=false;
-            }
-        }
-    });
-
-*/
-// -----------------------------------------------------------------------------------------------------------------------------------------
-
-
     // Read Reference lists
-    callServer(cReadRefList, false, { command:'ReadRefList', itemid:0, objectid:0, startts:0, endts:0, jsonparam:'%' });
+    callServer(cReadRefList, { command:'ReadRefList', itemid:0, objectid:0, startts:0, endts:0, jsonparam:'%' });
     // Read Item definition
-    callServer(cReadItem, false, { command:'ReadItem', itemid:0, objectid:0, startts:0, endts:0, jsonparam:'' });
+    callServer(cReadItem, { command:'ReadItem', itemid:0, objectid:0, startts:0, endts:0, jsonparam:'' });
     // Read current user
-    callServer(cReadCurrentUser, false, { command:'ReadCurrentUser', itemid:0, objectid:0, startts:0, endts:0, jsonparam:'' });
+    callServer(cReadCurrentUser, { command:'ReadCurrentUser', itemid:0, objectid:0, startts:0, endts:0, jsonparam:'' });
 
     // Read actors
-    readObjectLst(cReadActors, false);
+    readObjectLst(cReadActors);
 
     // Read img sensors
-    readObjectLst(cReadImgSensor, false);
-
-    gStartup.startup = false;
+    readObjectLst(cReadImgSensor);
 
     // Read users
-    readObjectLst(cReadUsers, false);
+    readObjectLst(cReadUsers);
 
     // Read sensors
-    readObjectLst(cReadSensor, false);
+    readObjectLst(cReadSensor);
 
     // Read sensorAct i.e. actors trigger by sensor reading
-    readObjectLst(cReadSensorAct, false);
-
-
-
-// -----------------------------------------------------------------------------------------------------------------------------------------
+    readObjectLst(cReadSensorAct);
 
 });
+
+// -----------------------------------------------------------------------------------------------------------------------------------------
 
 
