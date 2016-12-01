@@ -366,6 +366,7 @@ function gohHeader() {
 // goh-actors
 
 function gohActors() {
+    if ( fc.actorList == null ) return;
     var html = '';
     var i = 0;
     for (i = 0; i < fc.actorList.length; i++) {
@@ -402,6 +403,7 @@ console.log( fc.actorList[idx].Values[0].IdObject + '-' + jparam );
 // goh-isensor
 
 function gohImgSensors() {
+    if ( fc.imgSensorList == null ) return;
     var html = '';
     var i = 0;
     for (i = 0; i < fc.imgSensorList.length; i++) {
@@ -440,6 +442,7 @@ function gohSensorTd(sensorId,sensorName,readTs,readVal,update) {
 }
 
 function gohSensorTr() {
+    if ( fc.sensorList == null ) return;
     var html = '';
     var i = 0;
     for (i = 0; i < fc.sensorList.length; i++) {
@@ -466,6 +469,7 @@ function readSensorVal(sensorId) {
 
 
 function gohAdminTab() {
+    if ( fc.itemList == null ) return;
     var html = '';
     var i = 0;
     for (i = 0; i < fc.itemList.length; i++) {
@@ -552,8 +556,8 @@ function gohAdminEditObj(itemName,itemId,objectId) {
     $("#goh-admin-edit-object").html(html);
     adminHasError();
     $("#goh-admin-edit-object").attr("class", 'gray-out-page');
-
 }
+
 
 function gohAdminEditField(idx) {
     var field = curObjAdminEdit.Fields[idx];
@@ -565,7 +569,7 @@ function gohAdminEditField(idx) {
     switch ( htmlfieldtype(field) ) {
     case 'input':
         html = html + '<input id="admin_field_' + field.IdField + '" type="' + getinputtype(field) + '" placeholder="' + field.Helper + '" ';
-        html = html + 'oninput="isValidFieldVal(' + idx + ');" class="form-control input-sm" value="' + val.Val + '">';
+        html = html + 'oninput="isValidFieldVal(' + idx + ');" class="form-control input-sm" value=\'' + val.Val + '\'>'; // TODO prevent input of ' char
         html = html + '<span id="admin_field_ico_' + field.IdField + '" class="glyphicon form-control-feedback"></span>';
         break;
     case 'select':
