@@ -569,11 +569,16 @@ function gohAdminEditField(idx) {
         html = html + '<span id="admin_field_ico_' + field.IdField + '" class="glyphicon form-control-feedback"></span>';
         break;
     case 'select':
-        html = html + '<select id="admin_field_' + field.IdField + '" placeholder="' + field.Helper + '" onchange="' + isValidFieldVal(idx) + '" ';
-        html = html + 'value="' + val.Val + '" class="form-control">';
+        html = html + '<select id="admin_field_' + field.IdField + '" placeholder="' + field.Helper + '" class="form-control">';
+//        html = html + '" onchange="isValidFieldVal(' + idx + ');" value="' + val.Val;
         var i = 0;
         for (i = 0; i < fc.refList[field.RefList].length; i++) {
-            html = html + '<option value="' + fc.refList[field.RefList][i].Code + '" >' + fc.refList[field.RefList][i].Label + '</option>';
+            html = html + '<option value="' + fc.refList[field.RefList][i].Code + '"';
+            if ( val.Val == fc.refList[field.RefList][i].Code ) {
+                html = html + ' selected ';
+            }
+            html = html + '>' + fc.refList[field.RefList][i].Label;
+            html = html + '</option>';
         }
         html = html + '</select>';
         break;
@@ -622,7 +627,7 @@ function isValidFieldVal(idx) {
         $("#admin_div_field_"+field.IdField).attr("class", 'form-group has-feedback has-error');
         $("#admin_field_ico_"+field.IdField).attr("class", 'glyphicon form-control-feedback glyphicon-remove');
         curObjAdminEdit.Values[idx]["_v_"] = false;
-console.log('isValidFieldVal('+idx+') a= false ' + field.Required + '-' + curVal );
+        console.log('isValidFieldVal('+idx+') a= false ' + field.Required + '-' + curVal );
         return false;
     }
     if ( field.Regexp != '' ) {
@@ -631,7 +636,7 @@ console.log('isValidFieldVal('+idx+') a= false ' + field.Required + '-' + curVal
             $("#admin_div_field_"+field.IdField).attr("class", 'form-group has-feedback has-error');
             $("#admin_field_ico_"+field.IdField).attr("class", 'glyphicon form-control-feedback glyphicon-remove');
             curObjAdminEdit.Values[idx]["_v_"] = false;
-console.log('isValidFieldVal('+idx+') b= false ' + field.Regexp + '-' + fc.refList[field.Regexp][0].Label + '-' + curVal );
+            console.log('isValidFieldVal('+idx+') b= false ' + field.Regexp + '-' + fc.refList[field.Regexp][0].Label + '-' + curVal );
             return false;
         }
     }
@@ -640,14 +645,14 @@ console.log('isValidFieldVal('+idx+') b= false ' + field.Regexp + '-' + fc.refLi
             $("#admin_div_field_"+field.IdField).attr("class", 'form-group has-feedback has-error');
             $("#admin_field_ico_"+field.IdField).attr("class", 'glyphicon form-control-feedback glyphicon-remove');
             curObjAdminEdit.Values[idx]["_v_"] = false;
-console.log('isValidFieldVal('+idx+') c= false');
+            console.log('isValidFieldVal('+idx+') c= false');
             return false;
         } else {
             if ( searchObjByVal(objectListForItemId(field.IdItem),field.IdItem,curObjAdminEdit.Values[0].IdObject,field.Name,curVal) != null ) {
                 $("#admin_div_field_"+field.IdField).attr("class", 'form-group has-feedback has-error');
                 $("#admin_field_ico_"+field.IdField).attr("class", 'glyphicon form-control-feedback glyphicon-remove');
                 curObjAdminEdit.Values[idx]["_v_"] = false;
-console.log('isValidFieldVal('+idx+') d= false');
+                console.log('isValidFieldVal('+idx+') d= false');
                 return false;
             }
         }
@@ -655,7 +660,6 @@ console.log('isValidFieldVal('+idx+') d= false');
     $("#admin_div_field_"+field.IdField).attr("class", 'form-group has-feedback has-success');
     $("#admin_field_ico_"+field.IdField).attr("class", 'glyphicon form-control-feedback glyphicon-ok');
     curObjAdminEdit.Values[idx]["_v_"] = true;
-console.log('isValidFieldVal('+idx+') = true');
     return true;
 }
 

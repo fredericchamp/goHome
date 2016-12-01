@@ -41,26 +41,26 @@ insert into goHome values    ( 'Http',   'ca_crt',          '/var/goHome/certifi
 insert into goHome values    ( 'Http',   'fileserver_root', '/var/goHome/www');
 
 
--- YN				[{id:1,label:"Yes"},{id:0,label:"No"}]
+-- YN
 insert into RefValues values ('YN', '0', 'No');
 insert into RefValues values ('YN', '1', 'Yes');
--- UserProfil		[{id:1,label:"Administrator"},{id:2,label:"User"}]
+-- UserProfil
 insert into RefValues values ('UserProfil', '1', 'Administrator');
 insert into RefValues values ('UserProfil', '2', 'User');
--- DataType		[{id:1,label:"Bool"},{id:2,label:"Int"},{id:3,label:"Float"},{id:4,label:"Text"},{id:5,label:"DateTime"}], ............... ajouter un type JSON ?
+-- DataType / ajouter un type JSON ?
 insert into RefValues values ('DataType', '1', 'Bool');
 insert into RefValues values ('DataType', '2', 'Int');
 insert into RefValues values ('DataType', '3', 'Float');
 insert into RefValues values ('DataType', '4', 'Text');
 insert into RefValues values ('DataType', '5', 'DateTime');
--- ImgSensorT		[{id:1,label:"USB"},{id:2,label:"URL"}]
+-- ImgSensorT
 insert into RefValues values ('ImgSensorT', '1', 'USB');
 insert into RefValues values ('ImgSensorT', '2', 'URL');
--- ImgFormat 		[{id:1,label:"JPEG"},{id:2,label:"MJPEG"},{id:2,label:"Video"}]
+-- ImgFormat
 insert into RefValues values ('ImgFormat', '1', 'JPEG');
 insert into RefValues values ('ImgFormat', '2', 'MJPEG');
-insert into RefValues values ('ImgFormat', '3', 'VIDEO');
--- DynParamT		[{id:0,label:"None"},{id:1,label:"Bool"},{id:2,label:"Int"},{id:3,label:"Float"},{id:4,label:"Text"},{id:5,label:"DateTime"},{id:6,label:"URL"}] ............... ajouter un type JSON ?
+insert into RefValues values ('ImgFormat', '3', 'Video');
+-- DynParamT / ajouter un type JSON ?
 insert into RefValues values ('DynParamT', '0', 'None');
 insert into RefValues values ('DynParamT', '1', 'Bool');
 insert into RefValues values ('DynParamT', '2', 'Int');
@@ -68,18 +68,18 @@ insert into RefValues values ('DynParamT', '3', 'Float');
 insert into RefValues values ('DynParamT', '4', 'Text');
 insert into RefValues values ('DynParamT', '5', 'DateTime');
 insert into RefValues values ('DynParamT', '6', 'URL');
--- email			^[[:alnum:].\-_]*@[[:alnum:].\-_]*[.][[:alpha:]]{2,}$
+-- email
 insert into RefValues values ('email', '-1', '^[a-zA-Z0-9.\-_]*(@)[a-zA-Z0-9.\-_]*(\.)[a-zA-Z]{2,}$');
--- url				juste exclure les car speciaux ?
-insert into RefValues values ('url', '-1', '^[a-zA-Z0-9.\-_/]*$');
+-- url
+insert into RefValues values ('url', '-1', '^[a-zA-Z0-9.\-_/:]*$');
 -- phone number
 insert into RefValues values ('tel', '-1', '^[0-9]*$');
--- duration			^[[:num:]]+[dhms][s]{0,1}$
+-- duration
 insert into RefValues values ('Duration', '-1', '^[0-9]+(h|m|s|ms)$');
 -- TODO SensorList		select ...
-insert into RefValues values ('SensorList', '-2', 'select idObject, Val from ItemFieldVal where ...');
--- TODO ActorList			select ...
-insert into RefValues values ('ActorList', '-2', 'select idObject, Val from ItemFieldVal where ...');
+-- insert into RefValues values ('SensorList', '-2', 'select idObject, Val from ItemFieldVal where ...');
+-- TODO ActorList		select ...
+-- insert into RefValues values ('ActorList', '-2', 'select idObject, Val from ItemFieldVal where ...');
 
 
 insert into Item values ( 1, 'User',         1, 0, '' );
@@ -94,7 +94,7 @@ insert into ItemField select max(f.idField)+1, i.idItem, 1,               'ImgFi
 insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'FirstName',   4, 'First name',     'user first name', 0, 1, '',           ''      from ItemField f, Item i where i.name='User' and f.idItem = i.idItem group by i.idItem;
 insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'LastName',    4, 'Last name',      'user last  name', 0, 1, '',           ''      from ItemField f, Item i where i.name='User' and f.idItem = i.idItem group by i.idItem;
 insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'Email',       4, 'Email',          'email address',   1, 1, '',           'email' from ItemField f, Item i where i.name='User' and f.idItem = i.idItem group by i.idItem;
-insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'Phone',       4, 'Phone Num.',     'user phone num.', 0, 0, '',           'tel' from ItemField f, Item i where i.name='User' and f.idItem = i.idItem group by i.idItem;
+insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'Phone',       4, 'Phone Num.',     'user phone num.', 0, 0, '',           'tel'   from ItemField f, Item i where i.name='User' and f.idItem = i.idItem group by i.idItem;
 insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'IdProfil',    2, 'User profil',    'profil for user', 0, 1, 'UserProfil', ''      from ItemField f, Item i where i.name='User' and f.idItem = i.idItem group by i.idItem;
 insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'IsActive',    2, 'Active',         'status',          0, 1, 'YN',         ''      from ItemField f, Item i where i.name='User' and f.idItem = i.idItem group by i.idItem;
 
