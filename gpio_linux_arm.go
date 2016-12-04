@@ -2,9 +2,11 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/golang/glog"
 	"github.com/stianeikeland/go-rpio"
-	"os"
 	"time"
 )
 
@@ -47,7 +49,7 @@ func CallGPIO(param1 string, param2 string) (result string, err error) {
 	}
 	defer rpio.Close()
 
-	pin = rpio.Pin(23)
+	pin := rpio.Pin(23)
 
 	// Set pin to output mode
 	pin.Output()
