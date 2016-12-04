@@ -160,7 +160,6 @@ insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'ActPa
 insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'DynParamType', 2, 'Runtime param. type', 'run time parameter type', 0, 1, 'DynParamT',  ''    from ItemField f, Item i where i.name='Actor' and f.idItem = i.idItem group by i.idItem;
 insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'IsActive',     2, 'Active',              'status',                  0, 1, 'YN',         ''    from ItemField f, Item i where i.name='Actor' and f.idItem = i.idItem group by i.idItem;
 
--- For GPIO Param must be : <pin num>,r|w,0|1,<nb ms>,<nb times>,<interval>,na|min|max|avg
 insert into ItemFieldVal select max(v.idObject)+1, f.idField, 'images/portail.jpg'  from ItemFieldVal v, ItemField f, Item i where f.name='ImgFileName'  and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, 'Portal'              from ItemFieldVal v, ItemField f, Item i where f.name='Name'         and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '2'                   from ItemFieldVal v, ItemField f, Item i where f.name='IdProfil'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;

@@ -70,12 +70,12 @@ func CallGPIO(param1 string, param2 string) (result string, err error) {
 			vals[i] = pin.Read()
 		}
 		if gpioParam.Interval > 0 {
-			time.Sleep(time.Millisecond * gpioParam.Interval)
+			time.Sleep(time.Millisecond * time.Duration(gpioParam.Interval))
 		}
 	}
 
 	if gpioParam.Duration > 0 {
-		time.Sleep(time.Millisecond * gpioParam.Duration)
+		time.Sleep(time.Millisecond * time.Duration(gpioParam.Duration))
 		if gpioParam.Do == "write" {
 			setPinVal(pin, gpioParam.Value, true)
 		}
@@ -118,7 +118,7 @@ func setPinVal(pin rpio.Pin, value string, reverse bool) {
 }
 
 func calcResult(vals []rpio.State, op string) (result string) {
-	val := 0
+	val := rpio.State(0)
 	switch op {
 	case "min":
 		val = vals[0]
