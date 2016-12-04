@@ -1,4 +1,4 @@
-// internal.go
+// actor.go
 package main
 
 import (
@@ -15,7 +15,6 @@ import (
 //var actorsMap = map[string]HomeObject{}
 
 func init() {
-	RegisterInternalFunc(ActorFunc, "GPIO", ActorGPIO)
 	RegisterInternalFunc(ActorFunc, "SerialATSMS", SerialATSMS)
 }
 
@@ -157,11 +156,6 @@ func recordActorResult(actor HomeObject, userId int, param string, result string
 
 // -----------------------------------------------
 // -----------------------------------------------
-
-func ActorGPIO(param1 string, param2 string) (string, error) {
-	glog.Info("GPIO Not Implemented") // TODO
-	return time.Now().String(), nil
-}
 
 func SerialATSMS(param1 string, param2 string) (string, error) {
 	glog.Info("SerialATSMS Not Implemented") // TODO

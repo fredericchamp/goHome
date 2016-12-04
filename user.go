@@ -22,12 +22,6 @@ const (
 	ProfilUser
 )
 
-//var userProfilNames = map[TUserProfil]string{
-//	ProfilNone:  "No privilege",
-//	ProfilAdmin: "Administrator",
-//	ProfilUser:  "User",
-//}
-
 // -----------------------------------------------
 
 var userListLock sync.Mutex

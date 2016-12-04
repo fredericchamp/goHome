@@ -23,7 +23,7 @@ func getFuncKey(funcType internalFuncType, funcName string) string {
 	return fmt.Sprintf("%d %s", funcType, funcName)
 }
 
-// RegisterInternalFunc : Add a fucntion so it can be call as a sensor or actor
+// RegisterInternalFunc : Add a function so it can be call as a sensor or actor
 func RegisterInternalFunc(funcType internalFuncType, funcName string, function func(string, string) (string, error)) error {
 	fctKey := getFuncKey(funcType, funcName)
 

@@ -1,4 +1,4 @@
-// internal.go
+// sensor.go
 package main
 
 import (
@@ -37,7 +37,6 @@ var sensorPrevVal = map[int]string{}
 func init() {
 	RegisterInternalFunc(SensorFunc, "CpuUsage", CpuUsage)
 	RegisterInternalFunc(SensorFunc, "MemoryUsage", MemoryUsage)
-	RegisterInternalFunc(SensorFunc, "GPIO", SensorGPIO)
 }
 
 // sensorSetup : read defined sensors from DB then create a ticker and start reading goroutine for each sensor
@@ -299,9 +298,4 @@ func CpuUsage(param1 string, param2 string) (string, error) {
 func MemoryUsage(param1 string, param2 string) (string, error) {
 	glog.V(2).Info("MemoryUsage Not Implemented") // TODO
 	return "99", nil
-}
-
-func SensorGPIO(param1 string, param2 string) (string, error) {
-	glog.V(2).Info("GPIO Not Implemented") // TODO
-	return "1", nil
 }
