@@ -12,10 +12,10 @@ import (
 )
 
 type GPIOParam struct {
-	Pin      int
-	Do       string
-	Value    int
-	Duration int // in ms
+	Pin      int    // Pin number (BCM numbering)
+	Do       string // read | write
+	Value    string // high | low | toggle
+	Duration int    // in ms
 	Repeat   int
 	Interval int // in ms
 	Op       string

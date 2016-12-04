@@ -166,7 +166,7 @@ insert into ItemFieldVal select max(v.idObject)  , f.idField, 'Portal'          
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '2'                   from ItemFieldVal v, ItemField f, Item i where f.name='IdProfil'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                   from ItemFieldVal v, ItemField f, Item i where f.name='IsInternal'   and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, 'GPIO'                from ItemFieldVal v, ItemField f, Item i where f.name='ActCmd'       and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
-insert into ItemFieldVal select max(v.idObject)  , f.idField, '{"pin":22,"do":"write","value":1,"duration":2000}' from ItemFieldVal v, ItemField f, Item i where f.name='ActParam'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
+insert into ItemFieldVal select max(v.idObject)  , f.idField, '{"pin":22,"do":"write","value":"high","duration":2000}' from ItemFieldVal v, ItemField f, Item i where f.name='ActParam'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '0'                   from ItemFieldVal v, ItemField f, Item i where f.name='DynParamType' and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                   from ItemFieldVal v, ItemField f, Item i where f.name='IsActive'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 
@@ -175,7 +175,7 @@ insert into ItemFieldVal select max(v.idObject)  , f.idField, 'Garage'          
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '2'                   from ItemFieldVal v, ItemField f, Item i where f.name='IdProfil'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                   from ItemFieldVal v, ItemField f, Item i where f.name='IsInternal'   and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, 'GPIO'                from ItemFieldVal v, ItemField f, Item i where f.name='ActCmd'       and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
-insert into ItemFieldVal select max(v.idObject)  , f.idField, '{"pin":23,"do":"write","value":1,"duration":2000}' from ItemFieldVal v, ItemField f, Item i where f.name='ActParam'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
+insert into ItemFieldVal select max(v.idObject)  , f.idField, '{"pin":23,"do":"write","value":"high","duration":2000}' from ItemFieldVal v, ItemField f, Item i where f.name='ActParam'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '0'                   from ItemFieldVal v, ItemField f, Item i where f.name='DynParamType' and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                   from ItemFieldVal v, ItemField f, Item i where f.name='IsActive'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 
@@ -184,16 +184,16 @@ insert into ItemFieldVal select max(v.idObject)  , f.idField, 'GsmReset'        
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                   from ItemFieldVal v, ItemField f, Item i where f.name='IdProfil'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                   from ItemFieldVal v, ItemField f, Item i where f.name='IsInternal'   and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, 'GPIO'                from ItemFieldVal v, ItemField f, Item i where f.name='ActCmd'       and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
-insert into ItemFieldVal select max(v.idObject)  , f.idField, '{"pin":18,"do":"write","value":1,"duration":1000}' from ItemFieldVal v, ItemField f, Item i where f.name='ActParam'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
+insert into ItemFieldVal select max(v.idObject)  , f.idField, '{"pin":18,"do":"write","value":"high","duration":1000}' from ItemFieldVal v, ItemField f, Item i where f.name='ActParam'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '0'                   from ItemFieldVal v, ItemField f, Item i where f.name='DynParamType' and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                   from ItemFieldVal v, ItemField f, Item i where f.name='IsActive'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 
 insert into ItemFieldVal select max(v.idObject)+1, f.idField, 'images/gsmonoff.png' from ItemFieldVal v, ItemField f, Item i where f.name='ImgFileName'  and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
-insert into ItemFieldVal select max(v.idObject)  , f.idField, 'GsmReset'            from ItemFieldVal v, ItemField f, Item i where f.name='Name'         and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
+insert into ItemFieldVal select max(v.idObject)  , f.idField, 'GsmOnOff'            from ItemFieldVal v, ItemField f, Item i where f.name='Name'         and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                   from ItemFieldVal v, ItemField f, Item i where f.name='IdProfil'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                   from ItemFieldVal v, ItemField f, Item i where f.name='IsInternal'   and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, 'GPIO'                from ItemFieldVal v, ItemField f, Item i where f.name='ActCmd'       and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
-insert into ItemFieldVal select max(v.idObject)  , f.idField, '{"pin":17,"do":"write","value":1,"duration":1000}' from ItemFieldVal v, ItemField f, Item i where f.name='ActParam'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
+insert into ItemFieldVal select max(v.idObject)  , f.idField, '{"pin":17,"do":"write","value":"high","duration":1000}' from ItemFieldVal v, ItemField f, Item i where f.name='ActParam'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '0'                   from ItemFieldVal v, ItemField f, Item i where f.name='DynParamType' and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                   from ItemFieldVal v, ItemField f, Item i where f.name='IsActive'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 
