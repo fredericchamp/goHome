@@ -141,7 +141,7 @@ func calcResult(vals []rpio.State, op string) (result string) {
 		for i := 0; i < len(vals); i++ {
 			val += vals[i]
 		}
-		val /= len(vals)
+		val /= rpio.State(len(vals))
 		break
 	default:
 		val = 0
