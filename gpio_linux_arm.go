@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/golang/glog"
 	"github.com/stianeikeland/go-rpio"
-	"time"
 )
 
 type GPIOParam struct {
@@ -86,12 +87,6 @@ func CallGPIO(param1 string, param2 string) (result string, err error) {
 	} else {
 		result = calcResult(vals, gpioParam.Op)
 	}
-
-	// Toggle pin 20 times
-	//for x := 0; x < 20; x++ {
-	//	pin.Toggle()
-	//	time.Sleep(time.Second / 5)
-	//}
 
 	return
 }

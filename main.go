@@ -124,6 +124,12 @@ func main() {
 	}
 	defer actorCleanup()
 
+	if err = upnpSetup(db); err != nil {
+		glog.Errorf("actorSetup failed : %s ... exiting", err)
+		return
+	}
+	defer upnpCleanup()
+
 	// Setup finish
 	// -----------------------------------------------
 
