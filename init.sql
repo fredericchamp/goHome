@@ -34,7 +34,7 @@ create unique index RefValues_PK2 on RefValues (name, label);
 insert into goHome values    ( 'Global', 'Version',         '0.1');
 insert into goHome values    ( 'Global', 'Email',           'admin@goHomeDomain.net');
 -- Change 192.168.1.50 to the real server IP
-insert into goHome values    ( 'Http',   'server_name',     '192.168.1.50');
+insert into goHome values    ( 'Http',   'server_name',     '192.168.1.19');
 insert into goHome values    ( 'Http',   'https_port',      '5100');
 insert into goHome values    ( 'Http',   'server_crt',      '/var/goHome/certificats/server.crt.pem');
 insert into goHome values    ( 'Http',   'server_key',      '/var/goHome/certificats/server.key.pem');
