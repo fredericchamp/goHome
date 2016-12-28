@@ -40,8 +40,9 @@ insert into goHome values    ( 'Http',   'server_crt',      '/var/goHome/certifi
 insert into goHome values    ( 'Http',   'server_key',      '/var/goHome/certificats/server.key.pem');
 insert into goHome values    ( 'Http',   'ca_crt',          '/var/goHome/certificats/goHomeCAcert.pem');
 insert into goHome values    ( 'Http',   'fileserver_root', '/var/goHome/www');
--- UPnP parameter to allow access to the server if behind a router with NAT (UPNP must be enable on te router)
-insert into goHome select 'UPnP', '444', gs.val || ':' || gp.val from goHome gs, goHome gp where gs.perimeter = 'Http' and gs.name = 'server_name' and gp.perimeter = 'Http' and gp.name = 'https_port';
+-- UPnP parameter to allow access to the server if behind a router with NAT (UPnP must be enable on te router)
+insert into goHome select 'UPnP',   '444', gs.val || ':' || gp.val from goHome gs, goHome gp where gs.perimeter = 'Http' and gs.name = 'server_name' and gp.perimeter = 'Http' and gp.name = 'https_port';
+insert into goHome select 'UPnP', '14116', gs.val || ':' || '22'   from goHome gs where gs.perimeter = 'Http' and gs.name = 'server_name';
 
 -- YN
 insert into RefValues values ('YN', '0', 'No');
