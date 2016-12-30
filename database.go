@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	_ "github.com/mattn/go-sqlite3"
+	sqlite3 "github.com/mattn/go-sqlite3"
 )
 
 // -----------------------------------------------
@@ -150,12 +150,14 @@ func initDBFile(dbfile string) error {
 		defer db.Close()
 
 		// initDB sql stmt must be in init.sql file in the same dir as dbFileName
-		err = execSqlStmtsFromFile(db, fmt.Sprintf("%s%c%s", filepath.Dir(dbFileName), filepath.Separator, "init.sql"))
+		//		err = execSqlStmtsFromFile(db, fmt.Sprintf("%s%c%s", filepath.Dir(dbFileName), filepath.Separator, "init.sql"))
+		err = execSqlStmtsFromFile(db, filepath.Join(filepath.Dir(dbFileName), "init.sql"))
 		if err != nil {
 			return err
 		}
 		// perso.sql may not be present => ignore error
-		execSqlStmtsFromFile(db, fmt.Sprintf("%s%c%s", filepath.Dir(dbFileName), filepath.Separator, "perso.sql"))
+		//		execSqlStmtsFromFile(db, fmt.Sprintf("%s%c%s", filepath.Dir(dbFileName), filepath.Separator, "perso.sql"))
+		execSqlStmtsFromFile(db, filepath.Join(filepath.Dir(dbFileName), "perso.sql"))
 	}
 	return nil
 }
@@ -167,6 +169,94 @@ func openDB() (db *sql.DB, err error) {
 		glog.Errorf("Failed to open sqlite3(%s) : ", dbFileName, err)
 		return
 	}
+	return
+}
+
+// backupDB perform database backup
+func backupDB(srcDbName string, destDbDir string) (err error) {
+	var driverName = fmt.Sprintf("sqlite3_backup_%v", time.Now().UnixNano())
+	if len(srcDbName) <= 0 {
+		srcDbName = dbFileName
+	}
+	destDbName := filepath.Join(destDbDir, filepath.Base(srcDbName))
+
+	driverConns := []*sqlite3.SQLiteConn{}
+	sql.Register(driverName, &sqlite3.SQLiteDriver{
+		ConnectHook: func(conn *sqlite3.SQLiteConn) error {
+			driverConns = append(driverConns, conn)
+			return nil
+		},
+	})
+
+	// Open source db
+	srcDb, err := sql.Open(driverName, srcDbName)
+	if err != nil {
+		glog.Errorf("backupDB : Failed to open sqlite3(%s) : ", srcDbName, err)
+		return
+	}
+	defer srcDb.Close()
+
+	err = srcDb.Ping()
+	if err != nil {
+		glog.Errorf("backupDB : Failed to connect to the source database : %s", err)
+		return
+	}
+
+	// Open backup/dest db
+	destDb, err := sql.Open(driverName, destDbName)
+	if err != nil {
+		glog.Errorf("backupDB : Failed to open sqlite3(%s) : ", destDbName, err)
+		return
+	}
+	defer destDb.Close()
+
+	err = destDb.Ping()
+	if err != nil {
+		glog.Errorf("backupDB : Failed to connect to the dest database : %s", err)
+		return
+	}
+
+	// Check the driver connections.
+	if len(driverConns) != 2 {
+		glog.Errorf("backupDB : Expected 2 driver connections, but found %v.", len(driverConns))
+		return
+	}
+	srcDbDriverConn := driverConns[0]
+	if srcDbDriverConn == nil {
+		glog.Errorf("backupDB : The source database driver connection is nil.")
+		return
+	}
+	destDbDriverConn := driverConns[1]
+	if destDbDriverConn == nil {
+		glog.Errorf("backupDB : The destination database driver connection is nil.")
+		return
+	}
+
+	// Prepare to perform the backup.
+	backup, err := destDbDriverConn.Backup("main", srcDbDriverConn, "main")
+	if err != nil {
+		glog.Errorf("backupDB : Fail to initialize the backup:", err)
+		return
+	}
+
+	// Perform backup in 1 step
+	isDone, err := backup.Step(-1)
+	if err != nil {
+		glog.Errorf("backupDB : Fail to perform a backup step:", err)
+		return
+	}
+	if !isDone {
+		glog.Errorf("backupDB : Backup is unexpectedly not done.")
+		return
+	}
+
+	// Finish the backup.
+	err = backup.Finish()
+	if err != nil {
+		glog.Errorf("backupDB : Fail to finish backup:", err)
+		return
+	}
+
 	return
 }
 

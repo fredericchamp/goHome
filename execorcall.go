@@ -1,4 +1,4 @@
-// internal.go
+// execorcall.go
 package main
 
 import (
@@ -8,6 +8,9 @@ import (
 
 	"github.com/golang/glog"
 )
+
+// -----------------------------------------------
+// -----------------------------------------------
 
 type internalFuncType int
 
@@ -55,7 +58,31 @@ func CallInternalFunc(funcType internalFuncType, funcName string, param1 string,
 		glog.Error(err)
 		return "", err
 	}
+
+	if glog.V(2) {
+		glog.Infof("CallInternalFunc : %s(\"%s\",\"%s\")", funcName, param1, param2)
+	}
+
 	return function(param1, param2)
+}
+
+// -----------------------------------------------
+// -----------------------------------------------
+
+// ExecExternalCmd : cmd param1 param2
+func ExecExternalCmd(cmd string, param1 string, param2 string) (result string, err error) {
+
+	cmd = fmt.Sprintf("%s %s %s", cmd, param1, param2)
+	result, err = execCommand(cmd)
+	if err != nil {
+		return
+	}
+
+	if glog.V(1) {
+		glog.Infof("ExecExternalCmd : %s => %s", cmd, result)
+	}
+
+	return
 }
 
 // -----------------------------------------------

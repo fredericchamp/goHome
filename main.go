@@ -118,17 +118,16 @@ func main() {
 	}
 	defer sensorCleanup()
 
-	if err = actorSetup(db); err != nil {
-		glog.Errorf("actorSetup failed : %s ... exiting", err)
-		return
-	}
-	defer actorCleanup()
-
 	if err = upnpSetup(db); err != nil {
 		glog.Errorf("actorSetup failed : %s ... exiting", err)
 		return
 	}
 	defer upnpCleanup()
+
+	if err = backupSetup(db, ""); err != nil {
+		glog.Errorf("backupSetup failed : %s ... exiting", err)
+		return
+	}
 
 	// Setup finish
 	// -----------------------------------------------

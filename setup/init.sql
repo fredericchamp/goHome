@@ -40,7 +40,16 @@ insert into goHome values    ( 'Http',   'server_crt',      '/var/goHome/certifi
 insert into goHome values    ( 'Http',   'server_key',      '/var/goHome/certificats/server.key.pem');
 insert into goHome values    ( 'Http',   'ca_crt',          '/var/goHome/certificats/goHomeCAcert.pem');
 insert into goHome values    ( 'Http',   'fileserver_root', '/var/goHome/www');
--- UPnP parameter to allow access to the server if behind a router with NAT (UPnP must be enable on te router)
+-- Backup parameters
+insert into goHome values    ( 'Backup', 'date/time',       '0 2 * *');
+insert into goHome values    ( 'Backup', 'dir',             '/var/goHome/backup');
+insert into goHome values    ( 'Backup', 'files_1',         '/usr/bin/rsync -axv /var/goHome/certificats @backupDir@');
+insert into goHome values    ( 'Backup', 'files_2',         '/usr/bin/rsync -axv /var/goHome/www @backupDir@');
+insert into goHome values    ( 'Backup', 'files_3',         '/usr/bin/rsync -axv /var/goHome/*sql @backupDir@');
+insert into goHome values    ( 'Backup', 'archive',         '/bin/tar cvfah @archiveName@ -C @backupDir@ .');
+insert into goHome values    ( 'Backup', 'externalize',     '/bin/cp -f @archiveName@ /var/goHome/last.tar.gz');
+insert into goHome values    ( 'Backup', 'cleanup',         '/bin/rm -f @archiveName@');
+-- UPnP parameters to allow access to the server if behind a router with NAT (UPnP must be enable on te router)
 insert into goHome select 'UPnP',   '444', gs.val || ':' || gp.val from goHome gs, goHome gp where gs.perimeter = 'Http' and gs.name = 'server_name' and gp.perimeter = 'Http' and gp.name = 'https_port';
 insert into goHome select 'UPnP', '14116', gs.val || ':' || '22'   from goHome gs where gs.perimeter = 'Http' and gs.name = 'server_name';
 

@@ -80,7 +80,7 @@ func upnpSetup(db *sql.DB) (err error) {
 
 	portMap, err := getGlobalParamList(db, "UPnP")
 	if err != nil {
-		glog.Errorf("getGlobalParamList(db, UPNP) fail : %s", err)
+		glog.Errorf("getGlobalParamList(db, UPnP) fail : %s", err)
 		return
 	}
 	for source, target := range portMap {

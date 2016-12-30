@@ -2,73 +2,20 @@
 package main
 
 import (
-	"database/sql"
+	//"database/sql"
 	"errors"
 	"fmt"
-	//	"sync"
 	"time"
 
 	"github.com/golang/glog"
 )
 
-//var actorsMapLock sync.Mutex
-//var actorsMap = map[string]HomeObject{}
-
 func init() {
 	RegisterInternalFunc(ActorFunc, "SerialATSMS", SerialATSMS)
 }
 
-// actorSetup : read defined actors from DB then TODO
-func actorSetup(db *sql.DB) (err error) {
-
-	//	actorObjs, err := getHomeObjects(db, ItemActor, -1)
-	//	if err != nil {
-	//		return
-	//	}
-	//	if glog.V(2) {
-	//		glog.Info("\nActor\n", actorObjs)
-	//	}
-
-	//	actorsMapLock.Lock()
-	//	defer actorsMapLock.Unlock()
-
-	//	for _, actor := range actorObjs {
-
-	//		isActive, err := actor.getIntVal("IsActive")
-	//		if err != nil {
-	//			return err
-	//		}
-	//		if isActive == 0 {
-	//			continue
-	//		}
-
-	//		actorName, err := actor.getStrVal("Name")
-	//		if err != nil {
-	//			return err
-	//		}
-
-	//		actorsMap[actorName] = actor
-	//	}
-
-	//	if glog.V(1) {
-	//		glog.Infof("actorSetup Done (%d)", len(actorsMap))
-	//	}
-
-	return
-}
-
 // triggerActorById : trigger actor function using ActCmd, restirered parameter 'ActParam' and dynamic param 'param'
 func triggerActorById(actorId int, userId int, param string) (result string, err error) {
-	//	actorsMapLock.Lock()
-	//	defer actorsMapLock.Unlock()
-	//	for _, actor := range actorsMap {
-	//		if actor.getId() == actorId {
-	//			result, err = triggerObjActor(actor, userId, param)
-	//			return
-	//		}
-	//	}
-	//	err = errors.New(fmt.Sprintf("No known actor with id = %d", actorId))
-	//	glog.Error(err)
 
 	objs, err := getHomeObjects(nil, ItemIdNone, actorId)
 	if err != nil {
@@ -117,22 +64,12 @@ func triggerObjActor(actor HomeObject, userId int, param string) (result string,
 	if isInternal != 0 {
 		result, err = CallInternalFunc(ActorFunc, actCmd, actParam, param)
 	} else {
-		result, err = LaunchExternalCmd(ActorFunc, actCmd, actParam, param)
+		result, err = ExecExternalCmd(actCmd, actParam, param)
 	}
 
 	go recordActorResult(actor, userId, param, result)
 
 	return
-}
-
-// actorCleanup : stop and remove all actor ticker
-func actorCleanup() {
-	//	actorsMapLock.Lock()
-	//	actorsMap = make(map[string]HomeObject)
-	//	actorsMapLock.Unlock()
-	//	if glog.V(1) {
-	//		glog.Info("actorCleanup Done")
-	//	}
 }
 
 // recordActorResult : store in DB param and result for an actor

@@ -3,7 +3,6 @@ package main
 
 import (
 	"database/sql"
-	//	"errors"
 	"go/constant"
 	"go/token"
 	"go/types"
@@ -139,7 +138,7 @@ func readSensorValue(sensor HomeObject) (result string, err error) {
 	if isInternal != 0 {
 		result, err = CallInternalFunc(SensorFunc, readCmd, readParam, "")
 	} else {
-		result, err = LaunchExternalCmd(SensorFunc, readCmd, readParam, "")
+		result, err = ExecExternalCmd(readCmd, readParam, "")
 	}
 
 	return
@@ -176,13 +175,13 @@ func handleSensorValue(t time.Time, sensor HomeObject, value string) {
 	sensorPrevValLock.Lock()
 	prevVal, found := sensorPrevVal[sensor.Values[0].IdObject]
 	if !found {
-		prevVal = value // todo get prev val from db ?
+		prevVal = value // TODO get prev val from db ?
 	}
 	sensorPrevVal[sensor.Values[0].IdObject] = value
 	sensorPrevValLock.Unlock()
 
 	// Record value if required
-	if record != 0 { // todo : add more options : 0=never, 1=always, 2=only if change, ...
+	if record != 0 { // TODO add more options : 0=never, 1=always, 2=only if change, ...
 		go recordSensorValue(t, sensor, value)
 	}
 	// Trigger linked sensorAct if any
