@@ -2,16 +2,16 @@
 package main
 
 import (
-	//"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang/glog"
 )
 
 func init() {
-	RegisterInternalFunc(ActorFunc, "SerialATSMS", SerialATSMS)
+	RegisterInternalFunc(ActorFunc, "SendSMS", SendSMS)
 }
 
 // triggerActorById : trigger actor function using ActCmd, restirered parameter 'ActParam' and dynamic param 'param'
@@ -94,7 +94,20 @@ func recordActorResult(actor HomeObject, userId int, param string, result string
 // -----------------------------------------------
 // -----------------------------------------------
 
-func SerialATSMS(param1 string, param2 string) (string, error) {
-	glog.Info("SerialATSMS Not Implemented") // TODO
-	return time.Now().String(), nil
+// SendSMS : send a SMS using param1 device
+// param1 : serial port (i.e. /dev/ttyAMA0 on rpi). Other device type may be added in the futur
+// param2 : "phoneNum_message" with phoneNum := "[+](0,1)[0-9]+"
+func SendSMS(param1 string, param2 string) (result string, err error) {
+	serialPort := param1
+	pTab := strings.Split(param2, "_")
+	if len(pTab) <= 1 {
+		err = errors.New("SendSMS bad parameter '" + param2 + "', expecting '<phoneNum>_<message>'")
+		glog.Errorf(err.Error())
+		result = "bad parameter"
+		return
+	}
+	phoneNum := pTab[0]
+	message := strings.Join(pTab[1:], "_")
+	result, err = SerialATSMS(serialPort, phoneNum, message)
+	return
 }

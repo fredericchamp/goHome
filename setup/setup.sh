@@ -44,10 +44,10 @@ do
 	fi
 done
 
-# Create link binary and shell scripts
+# Create link for binary and shell scripts
 if [ ! -f /usr/local/bin/goHome ]
 then
-	sudo ln -s ${SRC_DIR}/goHome /usr/local/bin/goHome
+	sudo ln -s ${GOPATH}/bin/goHome /usr/local/bin/goHome
 fi
 
 for i in `ls -1 ${SRC_DIR}/scripts/`

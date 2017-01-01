@@ -119,10 +119,16 @@ func main() {
 	defer sensorCleanup()
 
 	if err = upnpSetup(db); err != nil {
-		glog.Errorf("actorSetup failed : %s ... exiting", err)
+		glog.Errorf("upnpSetup failed : %s ... exiting", err)
 		return
 	}
 	defer upnpCleanup()
+
+	if err = gsmSetup(db); err != nil {
+		glog.Errorf("gsmSetup failed : %s ... exiting", err)
+		return
+	}
+	defer gsmCleanup()
 
 	if err = backupSetup(db, ""); err != nil {
 		glog.Errorf("backupSetup failed : %s ... exiting", err)

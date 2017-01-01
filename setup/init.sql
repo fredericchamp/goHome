@@ -52,6 +52,8 @@ insert into goHome values    ( 'Backup', 'cleanup',         '/bin/rm -f @archive
 -- UPnP parameters to allow access to the server if behind a router with NAT (UPnP must be enable on te router)
 insert into goHome select 'UPnP',   '444', gs.val || ':' || gp.val from goHome gs, goHome gp where gs.perimeter = 'Http' and gs.name = 'server_name' and gp.perimeter = 'Http' and gp.name = 'https_port';
 insert into goHome select 'UPnP', '14116', gs.val || ':' || '22'   from goHome gs where gs.perimeter = 'Http' and gs.name = 'server_name';
+-- GSM Device reference for initialisation
+insert into goHome values    ( 'GSM',    'device',          '/dev/ttyAMA0');
 
 -- YN
 insert into RefValues values ('YN', '0', 'No');
@@ -213,7 +215,7 @@ insert into ItemFieldVal select max(v.idObject)+1, f.idField, 'images/gsmsms.png
 insert into ItemFieldVal select max(v.idObject)  , f.idField, 'SendSMS'           from ItemFieldVal v, ItemField f, Item i where f.name='Name'         and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '2'                 from ItemFieldVal v, ItemField f, Item i where f.name='IdProfil'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                 from ItemFieldVal v, ItemField f, Item i where f.name='IsInternal'   and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
-insert into ItemFieldVal select max(v.idObject)  , f.idField, 'SerialATSMS'       from ItemFieldVal v, ItemField f, Item i where f.name='ActCmd'       and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
+insert into ItemFieldVal select max(v.idObject)  , f.idField, 'SendSMS'           from ItemFieldVal v, ItemField f, Item i where f.name='ActCmd'       and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '/dev/ttyAMA0'      from ItemFieldVal v, ItemField f, Item i where f.name='ActParam'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '4'                 from ItemFieldVal v, ItemField f, Item i where f.name='DynParamType' and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                 from ItemFieldVal v, ItemField f, Item i where f.name='IsActive'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;

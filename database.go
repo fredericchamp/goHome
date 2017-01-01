@@ -321,7 +321,7 @@ func getGlobalParam(db *sql.DB, perimeter string, name string) (value string, er
 	rows.Next()
 	err = rows.Scan(&value)
 	if err != nil {
-		glog.Errorf("getGlobalParam scam fail  (perimeter=%s,name=%s) : %s ", perimeter, name, err)
+		glog.Errorf("getGlobalParam scan fail  (perimeter=%s,name=%s) : %s ", perimeter, name, err)
 		return
 	}
 
