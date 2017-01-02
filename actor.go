@@ -31,20 +31,6 @@ func triggerActorById(actorId int, userId int, param string) (result string, err
 	return
 }
 
-// triggerActorByName : trigger actor function using ActCmd, registered parameter 'ActParam' and dynamic param 'param'
-//func triggerActorByName(actorName string, userId int, param string) (result string, err error) {
-//	actorsMapLock.Lock()
-//	actor, found := actorsMap[actorName]
-//	actorsMapLock.Unlock()
-//	if !found {
-//		err = errors.New(fmt.Sprintf("No known actor '%s'", actorName))
-//		glog.Error(err)
-//		return
-//	}
-//	result, err = triggerObjActor(actor, userId, param)
-//	return
-//}
-
 // triggerObjActor : trigger actor function using ActCmd, registered parameter 'ActParam' and dynamic param 'param'
 func triggerObjActor(actor HomeObject, userId int, param string) (result string, err error) {
 	result = "Failed"

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,6 +24,13 @@ var gsmDevice string
 // -----------------------------------------------
 
 func gsmSetup(db *sql.DB) (err error) {
+
+	if db == nil {
+		if db, err = openDB(); err != nil {
+			return
+		}
+		defer db.Close()
+	}
 
 	gsmDevice, err = getGlobalParam(db, "GSM", "device")
 	if err != nil {
@@ -47,7 +55,13 @@ func gsmSetup(db *sql.DB) (err error) {
 		return
 	}
 
-	if err = gsmTurnOn(); err != nil {
+	if err = gsmActivate(db); err != nil {
+		gsmDevice = ""
+		gsmPort = nil
+		return
+	}
+
+	if err = gsmRegister(); err != nil {
 		gsmDevice = ""
 		gsmPort = nil
 		return
@@ -77,7 +91,155 @@ func gsmCleanup() {
 }
 
 //
-func gsmTurnOn() (err error) {
+func gsmActorOnOff(db *sql.DB) (err error) {
+	return gsmActor(db, "onOffActorId")
+}
+
+//
+func gsmActorReset(db *sql.DB) (err error) {
+	return gsmActor(db, "resetActorId")
+}
+
+//
+func gsmActor(db *sql.DB, actorParam string) (err error) {
+	strActorId, err := getGlobalParam(db, "GSM", actorParam)
+	if err != nil {
+		glog.Errorf("gsmActor : actor '%s' not found => no ation", actorParam)
+		err = nil
+		return
+	}
+
+	actorId, err := strconv.Atoi(strActorId)
+	if err != nil {
+		glog.Errorf("gsmActor : bad actorId '%s' for '%s' : %s", strActorId, actorParam, err)
+		return
+	}
+
+	_, err = triggerActorById(actorId, -1, "")
+
+	return
+}
+
+//
+func gsmActivate(db *sql.DB) (err error) {
+
+	// First check
+	if err = gsmSendCmdAT("AT\r", "OK\r", time.Millisecond*1500); err != nil {
+
+		// No response on first check => device may be off, try to turn it on
+		err = gsmActorOnOff(db)
+
+		// Wait for device to start
+		time.Sleep(time.Second * 9)
+
+		// Second check
+		if err = gsmSendCmdAT("AT\r", "OK\r", time.Millisecond*1500); err != nil {
+			// Still no response
+			err = errors.New("gsmActivate failed (OnOff)")
+			glog.Error(err.Error())
+			return
+		}
+	}
+
+	// GSM module initialization
+
+	// Reset to factory settings
+	if err = gsmSendCmdAT("AT&F\r", "OK\r", time.Second*2); err != nil {
+		err = errors.New("gsmActivate failed (factory settings)")
+		glog.Error(err.Error())
+		return
+	}
+
+	// Request calling line identification
+	if err = gsmSendCmdAT("AT+CLIP=1\r", "OK\r", time.Second*2); err != nil {
+		err = errors.New("gsmActivate failed (line identification)")
+		glog.Error(err.Error())
+		return
+	}
+
+	// Module error code 0->disable; 1->numeric; 2->verbose
+	if err = gsmSendCmdAT("AT+CMEE=0\r", "OK\r", time.Second*2); err != nil {
+		err = errors.New("gsmActivate failed (error code)")
+		glog.Error(err.Error())
+		return
+	}
+
+	// Set the SMS mode to text
+	if err = gsmSendCmdAT("AT+CMGF=1\r", "OK\r", time.Second*2); err != nil {
+		err = errors.New("gsmActivate failed (SMS mode to text)")
+		glog.Error(err.Error())
+		return
+	}
+
+	// Disable messages about new SMS from the GSM module
+	if err = gsmSendCmdAT("AT+CNMI=2,0\r", "OK\r", time.Second*2); err != nil {
+		err = errors.New("gsmActivate failed (disable messages about new SMS)")
+		glog.Error(err.Error())
+		return
+	}
+
+	// send AT command to init memory for SMS in the SIM card
+	// response: +CPMS: <usedr>,<totalr>,<usedw>,<totalw>,<useds>,<totals>
+	if err = gsmSendCmdAT("AT+CPMS=\"SM\",\"SM\",\"SM\"\r", "OK\r", time.Second*10); err != nil {
+		err = errors.New("gsmActivate failed (init memory for SMS)")
+		glog.Error(err.Error())
+		return
+	}
+
+	// select phonebook memory storage
+	if err = gsmSendCmdAT("AT+CPBS=\"SM\"\r", "OK\r", time.Second*2); err != nil {
+		err = errors.New("gsmActivate failed (phonebook memory storage)")
+		glog.Error(err.Error())
+		return
+	}
+
+	if glog.V(1) {
+		glog.Infof("gsmActivate => Device is ready")
+	}
+
+	return
+}
+
+//
+func gsmRegister() (err error) {
+	// Register to the network
+	// response: "+CREG: 0,1" or "+CREG: 0,2" or "+CREG: 0,5"
+	if err = gsmSendCmdAT("AT+CREG?\r", "OK\r", time.Second*5); err != nil {
+		err = errors.New("gsmRegister failed")
+		glog.Error(err.Error())
+		return
+	}
+	return
+}
+
+//
+func gsmReset() (err error) {
+	db, err := openDB()
+	if err != nil {
+		return
+	}
+	defer db.Close()
+
+	// Hard reset
+	if err = gsmActorReset(db); err != nil {
+		return
+	}
+
+	// Wait for device to start
+	time.Sleep(time.Second * 9)
+
+	// Check
+	if err = gsmSendCmdAT("AT\r", "OK\r", time.Millisecond*1500); err != nil {
+		// No response, try Device activation
+		if err = gsmActivate(db); err != nil {
+			return
+		}
+	}
+
+	if err = gsmRegister(); err != nil {
+		return
+	}
+
 	return
 }
 
@@ -119,8 +281,8 @@ func gsmWaitForCR(cr string, timeout time.Duration) (err error) {
 	return
 }
 
-// gsmSendCmdAT : Send cmdAT command and wait for "OK\r"
-// If no "OK\r" received before timeout then return an error
+// gsmSendCmdAT : Send cmdAT command and wait for cr
+// If no cr received before timeout then return an error
 func gsmSendCmdAT(cmdAT string, cr string, timeout time.Duration) (err error) {
 
 	if gsmPort == nil {
@@ -146,17 +308,22 @@ func gsmSendCmdAT(cmdAT string, cr string, timeout time.Duration) (err error) {
 		return
 	}
 
-	if glog.V(1) {
-		glog.Infof("gsmSendCmdAT done (%s)", cmdAT)
+	if glog.V(2) {
+		glog.Infof("gsmSendCmdAT done (%s)", strings.Replace(cmdAT, "\r", "\\r", -1))
 	}
 
 	return
 }
 
-//
-
 // SerialATSMS : send a SMS to phoneNum using AT cmd send on serial device serialPort
 func SerialATSMS(serialPort string, phoneNum string, message string) (result string, err error) {
+
+	if gsmDevice != serialPort {
+		err = errors.New(fmt.Sprintf("SerialATSMS unknown device '%s', existing device is '%s'", serialPort, gsmDevice))
+		glog.Error(err.Error())
+		result = "Fail"
+		return
+	}
 
 	if err = gsmSendCmdAT("AT+CMGS=\""+phoneNum+"\"\r", "\r>", time.Second*10); err != nil {
 		result = "Fail"
@@ -165,15 +332,10 @@ func SerialATSMS(serialPort string, phoneNum string, message string) (result str
 
 	// \x1a == (char)26 == ^Z
 	if err = gsmSendCmdAT(message+"\x1a\r", "OK\r", time.Second*10); err != nil {
+		gsmReset() // Try reset to prepare next try
 		result = "Fail"
 		return
 	}
-
-	//	if (RPIOK != rpiGsmAtCmd(fdSerial, szATCmd, 10000, 5000, "OK"))
-	//	{
-	//		rpiGsmReset( fdSerial); // SMS send failed => try rpiGsmReset
-	//		return RPIKO;
-	//	}
 
 	result = "Done"
 

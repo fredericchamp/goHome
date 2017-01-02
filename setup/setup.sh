@@ -58,3 +58,8 @@ do
 	fi
 done
 
+# Install systemd service
+sudo cp ${SRC_DIR}/setup/goHome.service /etc/systemd/system/goHome.service
+sudo systemctl daemon-reload
+sudo systemctl enable goHome.service
+

@@ -1,0 +1,34 @@
+# goHome systemd .service file
+#
+#     sudo cp setup/goHome.service /lib/systemd/system/goHome.service
+#     sudo systemctl daemon-reload
+#     sudo systemctl enable goHome.service
+#
+# Manual start|stop|restart with :
+#    sudo systemctl start|stop|restart goHome.service
+#
+
+[Unit]
+Description=goHome domotic operation
+After=multi-user.target
+
+[Service]
+Type=simple
+
+# User to run the daemon
+User=pi
+
+# Added /sbin/rpcbind + restart nfs as my ugly fix for :
+# Job rpcbind.service/start deleted to break ordering cycle starting with basic.target/start
+#ExecStartPre=/bin/systemctl restart rpcbind.service ; /bin/systemctl restart nfs-kernel-server.service
+
+
+# Main cmd
+ExecStart=/usr/local/bin/goHome -sqlite3=/var/goHome/goHome.sqlite3 -stderrthreshold=INFO -vmodule=*=1
+RestartSec=4
+TimeoutSec=4
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

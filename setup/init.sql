@@ -52,7 +52,7 @@ insert into goHome values    ( 'Backup', 'cleanup',         '/bin/rm -f @archive
 -- UPnP parameters to allow access to the server if behind a router with NAT (UPnP must be enable on te router)
 insert into goHome select 'UPnP',   '444', gs.val || ':' || gp.val from goHome gs, goHome gp where gs.perimeter = 'Http' and gs.name = 'server_name' and gp.perimeter = 'Http' and gp.name = 'https_port';
 insert into goHome select 'UPnP', '14116', gs.val || ':' || '22'   from goHome gs where gs.perimeter = 'Http' and gs.name = 'server_name';
--- GSM Device reference for initialisation
+-- GSM Device reference
 insert into goHome values    ( 'GSM',    'device',          '/dev/ttyAMA0');
 
 -- YN
@@ -201,6 +201,8 @@ insert into ItemFieldVal select max(v.idObject)  , f.idField, 'GPIO'            
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '{"pin":18,"do":"write","value":"high","duration":1000}' from ItemFieldVal v, ItemField f, Item i where f.name='ActParam'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '0'                   from ItemFieldVal v, ItemField f, Item i where f.name='DynParamType' and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                   from ItemFieldVal v, ItemField f, Item i where f.name='IsActive'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
+-- GSM actor reference
+insert into goHome select 'GSM', 'resetActorId', max(v.idObject) from ItemFieldVal v;
 
 insert into ItemFieldVal select max(v.idObject)+1, f.idField, 'images/gsmonoff.png' from ItemFieldVal v, ItemField f, Item i where f.name='ImgFileName'  and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, 'GsmOnOff'            from ItemFieldVal v, ItemField f, Item i where f.name='Name'         and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
@@ -210,6 +212,8 @@ insert into ItemFieldVal select max(v.idObject)  , f.idField, 'GPIO'            
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '{"pin":17,"do":"write","value":"high","duration":1000}' from ItemFieldVal v, ItemField f, Item i where f.name='ActParam'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '0'                   from ItemFieldVal v, ItemField f, Item i where f.name='DynParamType' and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                   from ItemFieldVal v, ItemField f, Item i where f.name='IsActive'     and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
+-- GSM actor reference
+insert into goHome select 'GSM', 'onOffActorId', max(v.idObject) from ItemFieldVal v;
 
 insert into ItemFieldVal select max(v.idObject)+1, f.idField, 'images/gsmsms.png' from ItemFieldVal v, ItemField f, Item i where f.name='ImgFileName'  and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, 'SendSMS'           from ItemFieldVal v, ItemField f, Item i where f.name='Name'         and i.name='Actor' and f.idItem = i.idItem group by f.nOrder;
