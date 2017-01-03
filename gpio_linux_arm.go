@@ -42,7 +42,9 @@ func CallGPIO(param1 string, param2 string) (result string, err error) {
 		return
 	}
 
-	glog.Infof("CallGPIO : %v ", gpioParam)
+	if glog.V(2) {
+		glog.Infof("CallGPIO : %v ", gpioParam)
+	}
 
 	if err = rpio.Open(); err != nil {
 		glog.Errorf("rpio.Open failed : %s", err)
@@ -52,11 +54,10 @@ func CallGPIO(param1 string, param2 string) (result string, err error) {
 
 	pin := rpio.Pin(gpioParam.Pin)
 
-	if gpioParam.Do == "read" {
-		pin.Input()
-	} else {
-		// Set pin to output mode (default)
+	if gpioParam.Do == "write" {
 		pin.Output()
+	} else {
+		pin.Input()
 	}
 
 	if gpioParam.Repeat <= 0 {

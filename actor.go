@@ -34,6 +34,10 @@ func triggerActorById(actorId int, userId int, param string) (result string, err
 // triggerObjActor : trigger actor function using ActCmd, registered parameter 'ActParam' and dynamic param 'param'
 func triggerObjActor(actor HomeObject, userId int, param string) (result string, err error) {
 	result = "Failed"
+	actName, err := actor.getStrVal("Name")
+	if err != nil {
+		return
+	}
 	actCmd, err := actor.getStrVal("ActCmd")
 	if err != nil {
 		return
@@ -51,6 +55,11 @@ func triggerObjActor(actor HomeObject, userId int, param string) (result string,
 		result, err = CallInternalFunc(ActorFunc, actCmd, actParam, param)
 	} else {
 		result, err = ExecExternalCmd(actCmd, actParam, param)
+	}
+
+	glog.Infof("Actor : user#%d : %s(%s) => %s", userId, actName, param, result)
+	if glog.V(1) {
+		glog.Infof("Actor : %s('%s','%s')", actCmd, actParam, param)
 	}
 
 	go recordActorResult(actor, userId, param, result)
@@ -72,6 +81,7 @@ func recordActorResult(actor HomeObject, userId int, param string, result string
 	if err != nil {
 		glog.Errorf("Fail to store result (%s) for actor %d : %s ", result, actorId, err)
 	}
+
 	if glog.V(1) {
 		glog.Infof("recordActorResult : %d - %s - %s", time.Now().Unix(), param, result)
 	}

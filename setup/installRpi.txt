@@ -87,7 +87,7 @@ go get github.com/fredericchamp/goHome
 
 
 # Setup goHome env & dir (must match parameters in .../goHome/setup/init.sql)
-${GOPATH}/src/github.com/fredericchamp/goHome/scrits/setup.sh
+${GOPATH}/src/github.com/fredericchamp/goHome/setup/setup.sh
 
 
 

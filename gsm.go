@@ -14,6 +14,12 @@ import (
 	"github.com/tarm/serial"
 )
 
+const (
+	deviceBaud = 9600
+	AT_OK      = "OK\r" // "\nOK\r"
+	SMS_prompt = "\n>"
+)
+
 var gsmPortLock sync.Mutex
 var gsmPort *serial.Port
 var gsmDevice string
@@ -24,6 +30,10 @@ var gsmDevice string
 // -----------------------------------------------
 
 func gsmSetup(db *sql.DB) (err error) {
+
+	if glog.V(2) {
+		glog.Infof("gsmSetup Start")
+	}
 
 	if db == nil {
 		if db, err = openDB(); err != nil {
@@ -41,7 +51,7 @@ func gsmSetup(db *sql.DB) (err error) {
 
 	serialConf := &serial.Config{
 		Name:        gsmDevice,
-		Baud:        9600,
+		Baud:        deviceBaud,
 		Size:        8,
 		Parity:      serial.ParityNone,
 		StopBits:    serial.Stop1,
@@ -49,19 +59,23 @@ func gsmSetup(db *sql.DB) (err error) {
 	}
 	gsmPort, err = serial.OpenPort(serialConf)
 	if err != nil {
-		glog.Errorf("gsmSetup openPort '%s' failed : %s", gsmDevice, err)
+		glog.Errorf("gsmSetup openPort '%s' failed  => GSM disable (%s)", gsmDevice, err)
 		gsmDevice = ""
 		gsmPort = nil
 		return
 	}
 
 	if err = gsmActivate(db); err != nil {
+		glog.Errorf("gsmSetup : %s => GSM disable", err)
+		err = nil
 		gsmDevice = ""
 		gsmPort = nil
 		return
 	}
 
 	if err = gsmRegister(); err != nil {
+		glog.Errorf("gsmSetup : %s => GSM disable", err)
+		err = nil
 		gsmDevice = ""
 		gsmPort = nil
 		return
@@ -124,7 +138,7 @@ func gsmActor(db *sql.DB, actorParam string) (err error) {
 func gsmActivate(db *sql.DB) (err error) {
 
 	// First check
-	if err = gsmSendCmdAT("AT\r", "OK\r", time.Millisecond*1500); err != nil {
+	if err = gsmSendCmdAT("AT\r", AT_OK, time.Millisecond*1500); err != nil {
 
 		// No response on first check => device may be off, try to turn it on
 		err = gsmActorOnOff(db)
@@ -133,7 +147,7 @@ func gsmActivate(db *sql.DB) (err error) {
 		time.Sleep(time.Second * 9)
 
 		// Second check
-		if err = gsmSendCmdAT("AT\r", "OK\r", time.Millisecond*1500); err != nil {
+		if err = gsmSendCmdAT("AT\r", AT_OK, time.Millisecond*1500); err != nil {
 			// Still no response
 			err = errors.New("gsmActivate failed (OnOff)")
 			glog.Error(err.Error())
@@ -144,35 +158,46 @@ func gsmActivate(db *sql.DB) (err error) {
 	// GSM module initialization
 
 	// Reset to factory settings
-	if err = gsmSendCmdAT("AT&F\r", "OK\r", time.Second*2); err != nil {
+	if err = gsmSendCmdAT("AT&F\r", AT_OK, time.Second*2); err != nil {
 		err = errors.New("gsmActivate failed (factory settings)")
 		glog.Error(err.Error())
 		return
 	}
 
+	// Set AT echo
+	AT_ECHO := "ATE0\r" // Disable AT echo
+	if glog.V(4) {
+		AT_ECHO = "ATE1\r" // Enable AT echo
+	}
+	if err = gsmSendCmdAT(AT_ECHO, AT_OK, time.Second*2); err != nil {
+		err = errors.New("gsmActivate failed (disable AT echo)")
+		glog.Error(err.Error())
+		return
+	}
+
 	// Request calling line identification
-	if err = gsmSendCmdAT("AT+CLIP=1\r", "OK\r", time.Second*2); err != nil {
+	if err = gsmSendCmdAT("AT+CLIP=1\r", AT_OK, time.Second*2); err != nil {
 		err = errors.New("gsmActivate failed (line identification)")
 		glog.Error(err.Error())
 		return
 	}
 
 	// Module error code 0->disable; 1->numeric; 2->verbose
-	if err = gsmSendCmdAT("AT+CMEE=0\r", "OK\r", time.Second*2); err != nil {
+	if err = gsmSendCmdAT("AT+CMEE=0\r", AT_OK, time.Second*2); err != nil {
 		err = errors.New("gsmActivate failed (error code)")
 		glog.Error(err.Error())
 		return
 	}
 
 	// Set the SMS mode to text
-	if err = gsmSendCmdAT("AT+CMGF=1\r", "OK\r", time.Second*2); err != nil {
+	if err = gsmSendCmdAT("AT+CMGF=1\r", AT_OK, time.Second*2); err != nil {
 		err = errors.New("gsmActivate failed (SMS mode to text)")
 		glog.Error(err.Error())
 		return
 	}
 
 	// Disable messages about new SMS from the GSM module
-	if err = gsmSendCmdAT("AT+CNMI=2,0\r", "OK\r", time.Second*2); err != nil {
+	if err = gsmSendCmdAT("AT+CNMI=2,0\r", AT_OK, time.Second*2); err != nil {
 		err = errors.New("gsmActivate failed (disable messages about new SMS)")
 		glog.Error(err.Error())
 		return
@@ -180,14 +205,14 @@ func gsmActivate(db *sql.DB) (err error) {
 
 	// send AT command to init memory for SMS in the SIM card
 	// response: +CPMS: <usedr>,<totalr>,<usedw>,<totalw>,<useds>,<totals>
-	if err = gsmSendCmdAT("AT+CPMS=\"SM\",\"SM\",\"SM\"\r", "OK\r", time.Second*10); err != nil {
+	if err = gsmSendCmdAT("AT+CPMS=\"SM\",\"SM\",\"SM\"\r", AT_OK, time.Second*10); err != nil {
 		err = errors.New("gsmActivate failed (init memory for SMS)")
 		glog.Error(err.Error())
 		return
 	}
 
 	// select phonebook memory storage
-	if err = gsmSendCmdAT("AT+CPBS=\"SM\"\r", "OK\r", time.Second*2); err != nil {
+	if err = gsmSendCmdAT("AT+CPBS=\"SM\"\r", AT_OK, time.Second*2); err != nil {
 		err = errors.New("gsmActivate failed (phonebook memory storage)")
 		glog.Error(err.Error())
 		return
@@ -204,7 +229,7 @@ func gsmActivate(db *sql.DB) (err error) {
 func gsmRegister() (err error) {
 	// Register to the network
 	// response: "+CREG: 0,1" or "+CREG: 0,2" or "+CREG: 0,5"
-	if err = gsmSendCmdAT("AT+CREG?\r", "OK\r", time.Second*5); err != nil {
+	if err = gsmSendCmdAT("AT+CREG?\r", AT_OK, time.Second*5); err != nil {
 		err = errors.New("gsmRegister failed")
 		glog.Error(err.Error())
 		return
@@ -229,7 +254,7 @@ func gsmReset() (err error) {
 	time.Sleep(time.Second * 9)
 
 	// Check
-	if err = gsmSendCmdAT("AT\r", "OK\r", time.Millisecond*1500); err != nil {
+	if err = gsmSendCmdAT("AT\r", AT_OK, time.Millisecond*1500); err != nil {
 		// No response, try Device activation
 		if err = gsmActivate(db); err != nil {
 			return
@@ -260,18 +285,27 @@ func gsmWaitForCR(cr string, timeout time.Duration) (err error) {
 	for true {
 		select {
 		case <-chanStop:
+			if glog.V(4) {
+				glog.Infof("gsmWaitForCR timeout received='%q'", received)
+			}
 			err = errors.New(fmt.Sprintf("gsmWaitForCR : timeout (%v)", timeout))
 			return
 		default:
 			var n int
 			n, err = gsmPort.Read(buf)
 			if err != nil && err.Error() != "EOF" {
+				if glog.V(3) {
+					glog.Infof("gsmWaitForCR received='%q'", received)
+				}
 				err = errors.New(fmt.Sprintf("gsmWaitForCR : %s", err))
 				return
 			}
 			if n > 0 {
-				received = fmt.Sprintf("%s%s", received, string(buf[0:n]))
+				received = fmt.Sprintf("%s%s", received, strings.Replace(string(buf[0:n]), "\x00", "", -1))
 				if strings.Contains(received, cr) {
+					if glog.V(3) {
+						glog.Infof("gsmWaitForCR received='%q'", received)
+					}
 					return
 				}
 			}
@@ -286,7 +320,7 @@ func gsmWaitForCR(cr string, timeout time.Duration) (err error) {
 func gsmSendCmdAT(cmdAT string, cr string, timeout time.Duration) (err error) {
 
 	if glog.V(2) {
-		glog.Infof("gsmSendCmdAT '(%s','%s',%v)", strings.Replace(cmdAT, "\r", "\\r", -1), strings.Replace(cr, "\r", "\\r", -1), timeout)
+		glog.Infof("gsmSendCmdAT '(%s','%q',%v)", strings.Replace(cmdAT, "\r", "\\r", -1), cr, timeout)
 	}
 
 	if gsmPort == nil {
@@ -299,14 +333,18 @@ func gsmSendCmdAT(cmdAT string, cr string, timeout time.Duration) (err error) {
 	gsmPortLock.Lock()
 	defer gsmPortLock.Unlock()
 
+	// Empty serial buffer
 	gsmPort.Flush()
+	gsmWaitForCR("XXXXX", time.Millisecond*100)
 
+	// Send AT command
 	n, err := gsmPort.Write([]byte(cmdAT))
 	if err != nil || n != len(cmdAT) {
 		glog.Errorf("gsmSendCmdAT Write failed : %s", err)
 		return
 	}
 
+	// Wait for GSM module answer or timeout
 	if err = gsmWaitForCR(cr, timeout); err != nil {
 		glog.Errorf("gsmSendCmdAT failed : %s", err)
 		return
@@ -329,13 +367,13 @@ func SerialATSMS(serialPort string, phoneNum string, message string) (result str
 		return
 	}
 
-	if err = gsmSendCmdAT("AT+CMGS=\""+phoneNum+"\"\r", ">", time.Second*10); err != nil {
+	if err = gsmSendCmdAT("AT+CMGS=\""+phoneNum+"\"\r", SMS_prompt, time.Second*10); err != nil {
 		result = "Fail"
 		return
 	}
 
 	// \x1a == (char)26 == ^Z
-	if err = gsmSendCmdAT(message+"\x1a\r", "OK\r", time.Second*10); err != nil {
+	if err = gsmSendCmdAT(message+"\x1a\r", AT_OK, time.Second*10); err != nil {
 		gsmReset() // Try reset to prepare next try
 		result = "Fail"
 		return
