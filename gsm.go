@@ -285,6 +285,10 @@ func gsmWaitForCR(cr string, timeout time.Duration) (err error) {
 // If no cr received before timeout then return an error
 func gsmSendCmdAT(cmdAT string, cr string, timeout time.Duration) (err error) {
 
+	if glog.V(2) {
+		glog.Infof("gsmSendCmdAT '(%s','%s',%v)", strings.Replace(cmdAT, "\r", "\\r", -1), strings.Replace(cr, "\r", "\\r", -1), timeout)
+	}
+
 	if gsmPort == nil {
 		err = errors.New("gsmSendCmdAT : gsmPort not initialized")
 		glog.Errorf(err.Error())
@@ -325,7 +329,7 @@ func SerialATSMS(serialPort string, phoneNum string, message string) (result str
 		return
 	}
 
-	if err = gsmSendCmdAT("AT+CMGS=\""+phoneNum+"\"\r", "\r>", time.Second*10); err != nil {
+	if err = gsmSendCmdAT("AT+CMGS=\""+phoneNum+"\"\r", ">", time.Second*10); err != nil {
 		result = "Fail"
 		return
 	}
