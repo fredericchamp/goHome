@@ -16,8 +16,8 @@ import (
 
 const (
 	deviceBaud = 9600
-	AT_OK      = "OK\r" // "\nOK\r"
-	SMS_prompt = "\n>"
+	AT_OK      = "OK\r" // may be safer for production "\nOK\r"
+	SMS_prompt = ">"    // may be safer for production "\n>"
 )
 
 var gsmPortLock sync.Mutex

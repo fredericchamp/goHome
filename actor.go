@@ -92,7 +92,7 @@ func recordActorResult(actor HomeObject, userId int, param string, result string
 
 // SendSMS : send a SMS using param1 device
 // param1 : serial port (i.e. /dev/ttyAMA0 on rpi). Other device type may be added in the futur
-// param2 : "phoneNum_message" with phoneNum := "[+](0,1)[0-9]+"
+// param2 : "<phoneNum>_<message>" with phoneNum := "[0-9]+"
 func SendSMS(param1 string, param2 string) (result string, err error) {
 	serialPort := param1
 	pTab := strings.Split(param2, "_")

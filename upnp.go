@@ -2,12 +2,11 @@
 package main
 
 import (
-	"strings"
-	"sync"
-
 	"database/sql"
 	"errors"
 	"strconv"
+	"strings"
+	"sync"
 
 	"github.com/golang/glog"
 	"github.com/huin/goupnp"
@@ -25,6 +24,10 @@ var mappingLock sync.Mutex
 var mappingTab []PortMapping
 
 var clientIGD *internetgateway1.WANIPConnection1
+
+func init() {
+	RegisterInternalFunc(SensorFunc, "GetExternalIP", GetExternalIP)
+}
 
 //
 func upnpSetup(db *sql.DB) (err error) {
@@ -68,15 +71,6 @@ func upnpSetup(db *sql.DB) (err error) {
 
 	// We will not handle here multiple client, we use only the first one
 	clientIGD = clients[0]
-
-	externalIP, err := clientIGD.GetExternalIPAddress()
-	if err != nil {
-		glog.Errorf("GetExternalIPAddress fail : %s", err)
-		return
-	}
-	if glog.V(1) {
-		glog.Infof("Found external IP = %s", externalIP)
-	}
 
 	portMap, err := getGlobalParamList(db, "UPnP")
 	if err != nil {
@@ -129,6 +123,26 @@ func upnpCleanup() {
 	}
 	if glog.V(1) {
 		glog.Infof("upnpCleanup Done")
+	}
+
+	return
+}
+
+//
+func GetExternalIP(param1 string, param2 string) (externalIP string, err error) {
+
+	if clientIGD == nil {
+		err = errors.New("GetExternalIP cancel : No clientIGD available")
+		return
+	}
+
+	externalIP, err = clientIGD.GetExternalIPAddress()
+	if err != nil {
+		glog.Errorf("GetExternalIPAddress fail : %s", err)
+		return
+	}
+	if glog.V(1) {
+		glog.Infof("Found external IP = %s", externalIP)
 	}
 
 	return
