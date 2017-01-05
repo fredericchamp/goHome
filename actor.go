@@ -2,6 +2,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -12,6 +13,7 @@ import (
 
 func init() {
 	RegisterInternalFunc(ActorFunc, "SendSMS", SendSMS)
+	RegisterInternalFunc(ActorFunc, "SendMail", SendMail)
 }
 
 // triggerActorById : trigger actor function using ActCmd, restirered parameter 'ActParam' and dynamic param 'param'
@@ -92,18 +94,52 @@ func recordActorResult(actor HomeObject, userId int, param string, result string
 
 // SendSMS : send a SMS using param1 device
 // param1 : serial port (i.e. /dev/ttyAMA0 on rpi). Other device type may be added in the futur
-// param2 : "<phoneNum>_<message>" with phoneNum := "[0-9]+"
+// param2 : "<phoneNum>|<message>" with phoneNum := "[0-9]+"
 func SendSMS(param1 string, param2 string) (result string, err error) {
 	serialPort := param1
-	pTab := strings.Split(param2, "_")
+	pTab := strings.Split(param2, "|")
 	if len(pTab) <= 1 {
-		err = errors.New("SendSMS bad parameter '" + param2 + "', expecting '<phoneNum>_<message>'")
+		err = errors.New("SendSMS bad parameter '" + param2 + "', expecting '<phoneNum>|<message>'")
 		glog.Errorf(err.Error())
 		result = "bad parameter"
 		return
 	}
 	phoneNum := pTab[0]
 	message := strings.Join(pTab[1:], "_")
+
 	result, err = SerialATSMS(serialPort, phoneNum, message)
+
+	return
+}
+
+// -----------------------------------------------
+// -----------------------------------------------
+
+// SendMail : send a mail
+// param1 : JSON param : {"server":"smtp.gmail.com","port":"587","tls":true,"account":"sender@gmail.com","password":"****",......}
+// param2 : "<to>|<subject>|<message>" ... so subject can't include char '|'
+func SendMail(param1 string, param2 string) (result string, err error) {
+	var mail MailInfo
+
+	err = json.Unmarshal([]byte(param1), &mail)
+	if err != nil {
+		glog.Errorf("Fail to unmarshal MailInfo (%s) : %s", param1, err)
+		return
+	}
+
+	pTab := strings.Split(param2, "|")
+	if len(pTab) <= 1 {
+		err = errors.New("SendMail bad parameter '" + param2 + "', expecting '<to>|<subject>|<message>'")
+		glog.Errorf(err.Error())
+		result = "bad parameter"
+		return
+	}
+
+	mail.To = pTab[0]
+	mail.Subject = pTab[1]
+	mail.Message = strings.Join(pTab[2:], "|")
+
+	result, err = smtpSendMail(mail)
+
 	return
 }

@@ -2,9 +2,13 @@
 package main
 
 import (
+	"crypto/tls"
 	"database/sql"
 	"errors"
 	"fmt"
+	"net"
+	//	"net/mail"
+	"net/smtp"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -292,4 +296,139 @@ func execCommand(cmd string) (result string, err error) {
 }
 
 // -----------------------------------------------
+// MAIL
 // -----------------------------------------------
+type MailInfo struct {
+	Server   string
+	Host     string
+	Port     int
+	Tls      bool
+	Account  string
+	Password string
+	From     string // TODO : should use : FromAddr mail.Adresse
+	//	ReplyTo  string // TODO : should use : ReplyToAddr mail.Adresse
+	To      string // TODO : should use : ToAddr mail.Adresse
+	Subject string
+	Message string
+}
+
+func smtpSendMail(mailInfo MailInfo) (result string, err error) {
+
+	// Check param
+	if mailInfo.Host == "" ||
+		mailInfo.Account == "" ||
+		mailInfo.Password == "" ||
+		mailInfo.To == "" {
+		err = errors.New(fmt.Sprintf("Bad parameter : %v", mailInfo))
+		result = "Bad parameter"
+		return
+	}
+	if mailInfo.From == "" {
+		mailInfo.From = mailInfo.Account
+	}
+	if mailInfo.Port == 0 {
+		mailInfo.Port = 25 // default SMTP port
+	}
+	if mailInfo.Server == "" {
+		mailInfo.Server = fmt.Sprintf("%s:%d", mailInfo.Host, mailInfo.Port)
+	}
+
+	var clientSmtp *smtp.Client
+
+	if glog.V(2) {
+		glog.Infof("mailInfo=%v", mailInfo)
+	}
+
+	if mailInfo.Tls {
+		tlsconfig := &tls.Config{
+			//InsecureSkipVerify: true, // for testing with self sign server certificate
+			ServerName: mailInfo.Host,
+		}
+
+		conn, err := tls.Dial("tcp", mailInfo.Server, tlsconfig)
+		if err != nil {
+
+			// If direct tls Dial fail, fall back to StartTLS method
+			conn, err := net.Dial("tcp", mailInfo.Server)
+			if err != nil {
+				glog.Errorf("smtpSendMail : net.Dial fail : %s", err)
+				return "tls error", err
+			}
+
+			clientSmtp, err = smtp.NewClient(conn, mailInfo.Host)
+			if err != nil {
+				glog.Errorf("smtpSendMail : smtp.NewClient fail : %s", err)
+				return "NewClient error", err
+			}
+
+			err = clientSmtp.StartTLS(tlsconfig)
+			if err != nil {
+				glog.Errorf("smtpSendMail : StartTLS fail : %s", err)
+				return "StartTLS error", err
+			}
+
+		} else {
+
+			clientSmtp, err = smtp.NewClient(conn, mailInfo.Host)
+			if err != nil {
+				glog.Errorf("smtpSendMail : smtp.NewClient fail : %s", err)
+				return "NewClient error", err
+			}
+		}
+
+	} else {
+
+		clientSmtp, err = smtp.Dial(mailInfo.Server)
+		if err != nil {
+			glog.Errorf("smtpSendMail : smtp.Dial fail : %s", err)
+			return "Dial error", err
+		}
+	}
+	defer clientSmtp.Quit()
+
+	// Auth
+	auth := smtp.PlainAuth("", mailInfo.Account, mailInfo.Password, mailInfo.Host)
+	if err = clientSmtp.Auth(auth); err != nil {
+		glog.Errorf("smtpSendMail : smtp.PlainAuth fail : %s", err)
+		return "PlainAuth error", err
+	}
+
+	// From
+	if err = clientSmtp.Mail(mailInfo.From); err != nil {
+		glog.Errorf("smtpSendMail : .Mail fail : %s", err)
+		return ".Mail error", err
+	}
+
+	// To
+	if err = clientSmtp.Rcpt(mailInfo.To); err != nil {
+		glog.Errorf("smtpSendMail : .Rcpt fail : %s", err)
+		return ".Rcpt error", err
+	}
+
+	// Data
+	w, err := clientSmtp.Data()
+	if err != nil {
+		glog.Errorf("smtpSendMail : .Data fail : %s", err)
+		return ".Data error", err
+	}
+
+	// Setup message
+	message := fmt.Sprintf("From: %s\r\n", mailInfo.From)
+	message += fmt.Sprintf("To: %s\r\n", mailInfo.To)
+	message += fmt.Sprintf("Subject: %s\r\n", mailInfo.Subject)
+	message += fmt.Sprintf("\r\n%s", mailInfo.Message)
+
+	_, err = w.Write([]byte(message))
+	if err != nil {
+		glog.Errorf("smtpSendMail : .Write fail : %s", err)
+		return ".Write error", err
+	}
+
+	err = w.Close()
+	if err != nil {
+		glog.Errorf("smtpSendMail : .Close fail : %s", err)
+		return ".Close error", err
+	}
+
+	return
+}
