@@ -12,6 +12,7 @@ import (
 )
 
 func init() {
+	RegisterInternalFunc(ActorFunc, "GoHomeExit", GoHomeExit)
 	RegisterInternalFunc(ActorFunc, "SendSMS", SendSMS)
 	RegisterInternalFunc(ActorFunc, "SendMail", SendMail)
 }
@@ -92,6 +93,27 @@ func recordActorResult(actor HomeObject, userId int, param string, result string
 // -----------------------------------------------
 // -----------------------------------------------
 
+// GoHomeExit : End server execution.
+// No built-in autorestart, should use systemd for restart (see setup/goHome.service)
+// param2 can be use to give a delay before exit
+func GoHomeExit(param1 string, param2 string) (result string, err error) {
+	wait := time.Second
+	if param1 != "" {
+		wait, err = time.ParseDuration(param2)
+		if err != nil {
+			glog.Errorf("GoHomeExit : error parsigng duration parm : %s", err)
+			wait = time.Second
+		}
+	}
+
+	time.AfterFunc(wait, func() { goHomeExitChan <- true })
+
+	return fmt.Sprintf("Server exit in %v", wait), nil
+}
+
+// -----------------------------------------------
+// -----------------------------------------------
+
 // SendSMS : send a SMS using param1 device
 // param1 : serial port (i.e. /dev/ttyAMA0 on rpi). Other device type may be added in the futur
 // param2 : "<phoneNum>|<message>" with phoneNum := "[0-9]+"
@@ -105,7 +127,7 @@ func SendSMS(param1 string, param2 string) (result string, err error) {
 		return
 	}
 	phoneNum := pTab[0]
-	message := strings.Join(pTab[1:], "_")
+	message := strings.Join(pTab[1:], "|")
 
 	result, err = SerialATSMS(serialPort, phoneNum, message)
 

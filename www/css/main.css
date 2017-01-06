@@ -5,6 +5,7 @@ body.gohome {
 	background-image: url(/images/PlageMoorea.jpg);
 	background-repeat: no-repeat;
 	background-attachment: fixed;
+	background-size: 100% 100%
 }
 
 .blackfnt {

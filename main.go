@@ -31,6 +31,11 @@ const defaultSqlite3File = "/var/goHome/goHome.sqlite3"
 // -----------------------------------------------
 // -----------------------------------------------
 
+var goHomeExitChan = make(chan bool)
+
+// -----------------------------------------------
+// -----------------------------------------------
+
 var dbfile = flag.String("sqlite3", defaultSqlite3File, "full path to sqlite3 database file")
 
 // Reminder : v flags for glog
@@ -96,8 +101,8 @@ func main() {
 	// -----------------------------------------------
 	// Setup server
 
-	chanExit := make(chan bool)
-	go signalSetup(chanExit)
+	//goHomeExitChan := make(chan bool)
+	go signalSetup(goHomeExitChan)
 
 	if err := initDBFile(*dbfile); err != nil {
 		glog.Error("Could not init DB ... exiting")
@@ -110,7 +115,7 @@ func main() {
 	}
 	defer db.Close()
 
-	go startHTTPS(chanExit)
+	go startHTTPS(goHomeExitChan)
 
 	if err = sensorSetup(db); err != nil {
 		glog.Errorf("sensorSetup failed : %s ... exiting", err)
@@ -142,6 +147,6 @@ func main() {
 
 	glog.Infof("---*--- %s setup done ---*---", filepath.Base(os.Args[0]))
 
-	<-chanExit
+	<-goHomeExitChan
 	defer glog.Info("Main done")
 }
