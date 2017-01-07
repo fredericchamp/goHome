@@ -79,6 +79,13 @@ img.icone{
 	max-height: 45px;
 }
 
+img.iconesmall{
+	width: 22px;
+	max-width: 22px;
+	height: 22px;
+	max-height: 22px;
+}
+
 img.imgsensor {
 	position: absolute;
 	width: 100%;

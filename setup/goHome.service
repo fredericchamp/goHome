@@ -1,8 +1,9 @@
 # goHome systemd .service file
 #
-#     sudo cp setup/goHome.service /lib/systemd/system/goHome.service
+#     sudo cp setup/goHome.service /etc/systemd/system/goHome.service
 #     sudo systemctl daemon-reload
 #     sudo systemctl enable goHome.service
+#     sudo systemctl start goHome.service
 #
 # Manual start|stop|restart with :
 #    sudo systemctl start|stop|restart goHome.service
@@ -18,9 +19,9 @@ Type=simple
 # User to run the daemon
 User=pi
 
-# Added /sbin/rpcbind + restart nfs as my ugly fix for :
-# Job rpcbind.service/start deleted to break ordering cycle starting with basic.target/start
-#ExecStartPre=/bin/systemctl restart rpcbind.service ; /bin/systemctl restart nfs-kernel-server.service
+# Added restart rpcbind + restart nfs as my ugly fix for : known debian bug :
+#    Job rpcbind.service/start deleted to break ordering cycle starting with basic.target/start
+ExecStartPre=/bin/systemctl restart rpcbind.service ; /bin/systemctl restart nfs-kernel-server.service
 
 
 # Main cmd

@@ -318,7 +318,7 @@ function callServer(action,cmde){
             var sensor = getObjById(fc.sensorList,cmde.objectid);
             sensor.Ts = sensorVal.Ts;
             sensor.Val = sensorVal.Val;
-            gohSensorTd(sensor.Values[0].IdObject, getObjVal(sensor,"Name"), sensor.Ts, sensor.Val, true);
+            gohSensorTd(sensor.Values[0].IdObject, getObjVal(sensor,"ImgFileName"), getObjVal(sensor,"Name"), sensor.Ts, sensor.Val, true);
             break;
         case cReadSensorAct:
             // TODO check if data != '{"error":"....."}'
@@ -429,9 +429,13 @@ function hideImgSensorReading() {
 // -----------------------------------------------------------------------------------------------------------------------------------------
 // goh-sensor-row
 
-function gohSensorTd(sensorId,sensorName,readTs,readVal,update) {
+function gohSensorTd(sensorId,sensorImg,sensorName,readTs,readVal,update) {
     var html = '';
-    html = html + '<td>' + sensorId + '</td>';
+	if ( sensorImg != '' ) {
+		html = html + '<td><img class="iconesmall" src="' + sensorImg + '"></img></td>';
+	} else {
+		html = html + '<td>#' + sensorId + '</td>';
+	}
     html = html + '<td>' + sensorName + '</td>';
     html = html + '<td>' + readVal + '</td>';
     html = html + '<td>' + formatUnixTs(readTs) + '</td>';
@@ -449,7 +453,7 @@ function gohSensorTr() {
         // TODO ignore inactive sensor
         var objid = fc.sensorList[i].Values[0].IdObject;
         html = html + '<tr id="gohsensorrow_' + objid + '" onclick="readSensorVal(' + objid + ')" >';
-        html = html + gohSensorTd(objid, getObjVal(fc.sensorList[i],"Name"), fc.sensorList[i].Ts, fc.sensorList[i].Val,false);
+        html = html + gohSensorTd(objid, getObjVal(fc.sensorList[i],"ImgFileName"), getObjVal(fc.sensorList[i],"Name"), fc.sensorList[i].Ts, fc.sensorList[i].Val,false);
         html = html + '</tr>';
     }
     for (i = 0; i < fc.sensorList.length; i++) {
