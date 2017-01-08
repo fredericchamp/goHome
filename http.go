@@ -12,7 +12,6 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strconv"
-	//"time"
 
 	"github.com/golang/glog"
 )
@@ -28,19 +27,6 @@ func getFormStrVal(form url.Values, key string, idx int) (strVal string, err err
 	strVal = val[idx]
 	return
 }
-
-//func getFormIntVal(form url.Values, key string, idx int) (intVal int, err error) {
-//	strVal, err := getFormStrVal(form, key, idx)
-//	if err != nil {
-//		return
-//	}
-//	intVal, err = strconv.Atoi(strVal)
-//	if err != nil {
-//		err = errors.New(fmt.Sprintf(`{"error":"Fail to parse %s id from (%s)"}`, key, strVal))
-//		return
-//	}
-//	return
-//}
 
 func writeApiError(w http.ResponseWriter, errMsg string) {
 	w.Write(apiError(errMsg))

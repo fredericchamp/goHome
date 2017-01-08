@@ -249,8 +249,8 @@ func triggerSensorAct(sensorAct HomeObject, sensorName string, prevVal string, l
 	}
 	condition = strings.TrimSpace(condition)
 	condition = strings.Replace(condition, TagSensorName, sensorName, -1)
-	condition = strings.Replace(condition, TagPrevVal, prevVal, -1)
-	condition = strings.Replace(condition, TagLastVal, lastVal, -1)
+	condition = strings.Replace(condition, TagPrevVal, cleanSpaces(prevVal), -1)
+	condition = strings.Replace(condition, TagLastVal, cleanSpaces(lastVal), -1)
 	if glog.V(2) {
 		glog.Infof("Condition for sensorAct #%d (%s) = '%s'", sensorActId, sensorName, condition)
 	}
@@ -273,11 +273,11 @@ func triggerSensorAct(sensorAct HomeObject, sensorName string, prevVal string, l
 		if err != nil {
 			actorParam = lastVal
 		} else {
-			actorParam = strings.TrimSpace(actorParam)
 			actorParam = strings.Replace(actorParam, TagSensorName, sensorName, -1)
 			actorParam = strings.Replace(actorParam, TagPrevVal, prevVal, -1)
 			actorParam = strings.Replace(actorParam, TagLastVal, lastVal, -1)
 			actorParam = strings.Replace(actorParam, TagCondition, condition, -1)
+			actorParam = cleanSpaces(actorParam)
 		}
 
 		actorId, err := sensorAct.getIntVal("idActor")

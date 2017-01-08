@@ -26,7 +26,7 @@ const (
 	apiSaveItem                   = "SaveItems"
 	apiSaveObject                 = "SaveObject"
 	apiDeleteItem                 = "DeleteItems"
-	apiDeleteObject               = "DeleteObject" // TODO
+	apiDeleteObject               = "DeleteObject"
 	apiSendSensorVal              = "SendSensorVal"
 	apiTriggerActor               = "TriggerActor"
 )
