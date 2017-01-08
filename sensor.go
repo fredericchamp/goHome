@@ -2,10 +2,13 @@
 package main
 
 import (
+	"bufio"
 	"database/sql"
+	"fmt"
 	"go/constant"
 	"go/token"
 	"go/types"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -97,12 +100,12 @@ func sensorUpdateTicker(sensor HomeObject) (err error) {
 	}
 
 	if glog.V(2) {
-		glog.Infof("Sensor %d (#Act=%d) / %s => New Ticker (%d)", sensor.Values[0].IdObject, len(sensor.linkedObjs), durationStr, duration)
+		glog.Infof("Sensor %d (nb act=%d) : Ticker(%v)", sensor.Values[0].IdObject, len(sensor.linkedObjs), duration)
 	}
 
 	sensorTickers[sensor.Values[0].IdObject] = time.NewTicker(duration)
 
-	go readSensor(sensor)
+	go readSensor(sensor, sensorTickers[sensor.Values[0].IdObject])
 
 	return
 }
@@ -144,19 +147,20 @@ func readSensorValue(sensor HomeObject) (result string, err error) {
 	return
 }
 
-// readSensor : call readSensorValue according to initialised corresponding ticker and handleSensorValue
-func readSensor(sensor HomeObject) {
-	sensorTickersLock.Lock()
-	localTicker := sensorTickers[sensor.Values[0].IdObject]
-	sensorTickersLock.Unlock()
-
-	for t := range localTicker.C {
+// readSensor : call readSensorValue according to corresponding ticker and handleSensorValue
+func readSensor(sensor HomeObject, ticker *time.Ticker) {
+	for t := range ticker.C {
 		result, err := readSensorValue(sensor)
 		if err != nil {
+			glog.Errorf("readSensor fail %s ", err)
 			continue
 		}
 
 		handleSensorValue(t, sensor, result)
+
+		if glog.V(2) {
+			glog.Infof("readSensor %d : %s", sensor.Values[0].IdObject, result)
+		}
 	}
 }
 
@@ -289,12 +293,98 @@ func triggerSensorAct(sensorAct HomeObject, sensorName string, prevVal string, l
 // -----------------------------------------------
 // -----------------------------------------------
 
+var cpuReadNs int64
+var cpuReadVal int
+
+func readProcStat() (nano int64, read int, nb int, err error) {
+	nano = time.Now().UnixNano()
+	f, err := os.Open("/proc/stat")
+	if err != nil {
+		glog.Errorf("CpuUsage : %s", err)
+		return
+	}
+	defer f.Close()
+
+	var key string
+	var u, n, s int
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		_, err = fmt.Sscanf(line, "%s %d %d %d", &key, &u, &n, &s)
+		if err != nil {
+			glog.Errorf("Scan fail '%s' : %s", line, err)
+			return
+		}
+		if key == "cpu" {
+			read = u + n + s
+		} else if strings.HasPrefix(key, "cpu") {
+			nb++
+		} else {
+			break
+		}
+	}
+	return
+}
+
 func CpuUsage(param1 string, param2 string) (string, error) {
-	glog.V(2).Info("CpuUsage Not Implemented") // TODO
-	return "99", nil
+	nano, read, nb, err := readProcStat()
+	if err != nil {
+		return "99", err
+	}
+
+	// If previous mesure was more than 60s ago
+	if nano-cpuReadNs > 60000000 {
+		cpuReadNs = nano
+		cpuReadVal = read
+		time.Sleep(time.Second)
+		nano, read, nb, err = readProcStat()
+		if err != nil {
+			return "99", err
+		}
+	}
+
+	load := float32(int64(read-cpuReadVal)*1000000000.0) / float32((nano-cpuReadNs)*int64(nb)*1.0)
+	load += 0.5 // for rounding when converting with %.0f
+
+	if glog.V(1) {
+		glog.Infof("CpuUsage %3.2f = %d / ( %d * %d )", load, (read-cpuReadVal)*1000000000, nano-cpuReadNs, nb)
+	}
+
+	return fmt.Sprintf("%.0f", load), nil
 }
 
 func MemoryUsage(param1 string, param2 string) (string, error) {
-	glog.V(2).Info("MemoryUsage Not Implemented") // TODO
-	return "99", nil
+	f, err := os.Open("/proc/meminfo")
+	if err != nil {
+		glog.Errorf("CpuUsage : %s", err)
+		return "99", err
+	}
+	defer f.Close()
+
+	var key string
+	var val, total, free int
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		_, err = fmt.Sscanf(line, "%s %d", &key, &val)
+		if err != nil {
+			glog.Errorf("Scan fail '%s' : %s", line, err)
+			return "99", err
+		}
+		if key == "MemTotal:" {
+			total = val
+		} else if key == "MemFree:" {
+			free = val
+		} else {
+			break
+		}
+	}
+
+	used := float32((total-free)*100) / float32(total)
+
+	if glog.V(1) {
+		glog.Infof("MemoryUsage %3.2f = %d / %d", used, total, free)
+	}
+
+	return fmt.Sprintf("%.0f", used), nil
 }

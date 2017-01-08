@@ -155,9 +155,9 @@ func initDBFile(dbfile string) error {
 		if err != nil {
 			return err
 		}
-		// perso.sql may not be present => ignore error
+		// private.sql may not be present => ignore error
 		//		execSqlStmtsFromFile(db, fmt.Sprintf("%s%c%s", filepath.Dir(dbFileName), filepath.Separator, "perso.sql"))
-		execSqlStmtsFromFile(db, filepath.Join(filepath.Dir(dbFileName), "perso.sql"))
+		execSqlStmtsFromFile(db, filepath.Join(filepath.Dir(dbFileName), "private.sql"))
 	}
 	return nil
 }
