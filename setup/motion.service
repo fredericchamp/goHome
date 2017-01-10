@@ -1,0 +1,39 @@
+# motion detection systemd .service file (used to replace /etc/init.d/motion)
+#
+# Setup 
+#     sudo rm /etc/init.d/motion
+#     sudo cp ${GOPATH}/src/github.com/fredericchamp/goHome/setup/motion.service /etc/systemd/system/motion.service
+#     sudo systemctl daemon-reload
+#     sudo systemctl enable motion.service
+#
+# Manual start with :
+#    sudo systemctl start motion
+#
+# Stop with :
+#    sudo systemctl stop motion
+#
+
+[Unit]
+Description=Start Motion detection
+After=multi-user.target
+
+[Service]
+Type=simple
+
+# User to run the daemon
+User=pi
+
+PIDFile=/var/log/motion/motion.pid
+
+# Main cmd
+ExecStart=/usr/bin/motion -m
+
+RestartSec=4
+TimeoutSec=4
+
+KillMode=process
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+

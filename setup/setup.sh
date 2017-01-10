@@ -15,6 +15,7 @@ fi
 if [ ! -d ${VAR_DIR}/log ]
 then
 	mkdir ${VAR_DIR}/log
+	sudo chmod a+rwx ${VAR_DIR}/log
 fi
 
 # Create backup dir for goHome
@@ -58,8 +59,35 @@ do
 	fi
 done
 
+
+# Setup motion 
+if [ ! -d ${VAR_DIR}/motion ]
+then
+	mkdir ${VAR_DIR}/motion
+fi
+if [ ! -d ${VAR_DIR}/motion/capture ]
+then
+	mkdir ${VAR_DIR}/motion/capture
+	ln -s ${VAR_DIR}/motion/capture ${VAR_DIR}/www/motion
+fi
+if [ ! -d ${VAR_DIR}/motion/log ]
+then
+	mkdir ${VAR_DIR}/motion/log
+fi
+if [ ! -d ${VAR_DIR}/motion/target_dir ]
+then
+	mkdir ${VAR_DIR}/motion/target_dir
+fi
+sudo rm /etc/motion/motion.conf
+sudo ln -s ${SRC_DIR}/setup/motion.conf /etc/motion/motion.conf
+
+
 # Install systemd service
+sudo rm /etc/init.d/motion
+sudo rm /run/systemd/generator.late/motion.service
+sudo cp ${SRC_DIR}/setup/motion.service /etc/systemd/system/motion.service
 sudo cp ${SRC_DIR}/setup/goHome.service /etc/systemd/system/goHome.service
 sudo systemctl daemon-reload
+sudo systemctl enable motion.service
 sudo systemctl enable goHome.service
 

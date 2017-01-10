@@ -57,10 +57,11 @@ func backupSetup(db *sql.DB, datetimeParam string) (err error) {
 	}
 
 	// Set next backup to run when expected
+	// TODO : check if already exist a pending backup and cancel it
 	time.AfterFunc(nextBackupAt.Sub(time.Now()), doBackup)
 
 	if glog.V(1) {
-		glog.Infof("backupSetup Done")
+		glog.Infof("Next backup at %v", nextBackupAt)
 	}
 
 	return nil
@@ -111,6 +112,7 @@ func doBackup() {
 	}
 
 	// Build archive backup file if "archive" parameter is present
+	// TODO : add hostname to archive file name
 	archiveName := fmt.Sprintf("%s_%s", time.Now().Format("20060102_150405"), "goHome.tar.gz")
 	archiveName = filepath.Join(os.TempDir(), archiveName)
 
@@ -255,7 +257,7 @@ func nextMatchingDatetime(datetimeParam string, now time.Time) (nextAt time.Time
 		}
 	}
 
-	if glog.V(1) {
+	if glog.V(2) {
 		glog.Infof("nextMatchingdatetime '%s' = %v", datetimeParam, nextAt)
 	}
 
@@ -428,6 +430,10 @@ func smtpSendMail(mailInfo MailInfo) (result string, err error) {
 	if err != nil {
 		glog.Errorf("smtpSendMail : .Close fail : %s", err)
 		return ".Close error", err
+	}
+
+	if glog.V(1) {
+		glog.Infof("smtpSendMail to %s : '%s' ", mailInfo.To, mailInfo.Subject)
 	}
 
 	return

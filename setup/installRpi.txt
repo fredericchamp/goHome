@@ -29,14 +29,6 @@ sudo apt-get upgrade
 sudo apt-get dist-upgrade
 
 ########################################################
-# Mount fs for backup sd (see script/mntsd)
-#sudo mkdir /mnt/BOOT
-#sudo mkdir /mnt/OS
-#sudo chown -R pi:pi /mnt/BOOT /mnt/OS
-#sudo mount -o uid=pi,gid=pi -t vfat /dev/sda1 /mnt/BOOT
-#sudo mount /dev/sda2 /mnt/OS
-
-########################################################
 # Install needed packages
 sudo apt-get install git
 sudo apt-get install sqlite3
@@ -46,17 +38,19 @@ sudo apt-get install minicom
 sudo apt-get autoremove
 sudo apt-get autoclean
 
-########################################################
-# Install tools
-
-# rpi-clone
-# easy backup for all SD card
-#
+# rpi-clone : easy backup for all SD card
 mkdir /home/pi/downloads
 cd /home/pi/downloads
 git clone https://github.com/billw2/rpi-clone.git
 sudo cp rpi-clone/rpi-clone /usr/local/bin/rpi-clone
 
+# h264 encoding (and others) : libav-tools (fork from ffmpeg ) https://wiki.debian.org/ffmpeg
+sudo apt-get install libav-tools
+
+# webcam motion detection and streaming
+sudo apt-get install motion
+
+#
 # Go lang
 #
 # sudo apt-get install golang : currently install go1.3 on raspberry pi, we need at least go1.6
@@ -70,7 +64,6 @@ sudo rm -f go1.7.linux-armv6l.tar.gz
 # Add /usr/local/go/bin to default PATH, or create links :
 sudo ln -s /usr/local/go/bin/* /usr/local/bin
 
-
 ########################################################
 # Retreive goHome
 
@@ -81,95 +74,61 @@ mkdir -p ~/Projets/go/
 sudo /bin/bash -c 'echo "export GOPATH=/home/pi/Projets/go" > /etc/profile.d/golang.sh'
 . /etc/profile.d/golang.sh
 
-# Get goHome sources and dependencies (will take some times as this will build goHome and all dependencies)
+# Get goHome sources and dependencies (may be long as this will build goHome and all dependencies)
 cd ${GOPATH}
 go get github.com/fredericchamp/goHome
 
 
-# Setup goHome env & dir (must match parameters in .../goHome/setup/init.sql)
+########################################################
+# Setup 
+
+# goHome env & dir (must match parameters in .../goHome/setup/init.sql)
 ${GOPATH}/src/github.com/fredericchamp/goHome/setup/setup.sh
 
+# Database
+# See .../goHome/setup/init.sql 
+# 	update init.sql to match you needs or better create a file private.sql to store your own param
+
+# Start at boot time + auto restart
+# See .../goHome/script/setup.sh : goHome.service + systemctl setup
 
 
 ########################################################
 # Setup SSL cert for web server
-# If you don't want to use HTTPS/TLS change/remove tlsConfig in http.go
-# Warning : pay attention to file access rights ! Any user with read access to the key can use the certificate
 #
+# 'security' model is base on certificates : 
+#    Server cert for HTTPS/TLS
+#    Client cert required and check at user connexion time => no server side password managment
+#    Client identification base on email form cert vs email in user record in DB
+#
+# Warning : pay attention to file access rights ! Any user with read access to the key can use a certificate
 # Default cert files are (can be change using parameter in DB)
 # .../goHome/certificats/server.crt.pem and .../goHome/certificats/server.key.pem
-# thoses files are required for HTTPS
 
-# For client cert see ~/Projets/go/src/github.com/fredericchamp/goHome/certificats/clientCert.sh
-
-
-
-# TODO : goHome.service + systemctl setup
-
-
-
-
-
-
-
-
-
-
-
-
-
+# For client cert see .../goHome/certificats/clientCert.sh
 
 
 ########################################################
-# For DB backup to FTP server install in crontab (crontab -e) the following :
-#   0 4  *   *   *     /usr/local/src/rpiDomotic/script/backupDBtoFTP.sh /var/data/rpiDomotic.sqlite3
 
-########################################################
-# Sendmail setup (using gmail smtp)
-# Note backupDBtoFTP.sh send email in case of failure => need to setup sendmail
-sudo apt-get install heirloom-mailx
-sudo apt-get install ssmtp
 
-sudo vi /etc/ssmtp/ssmtp.conf
->root=monLogin@gmail.com
->mailhub=smtp.gmail.com:587
->hostname=RPI
->AuthUser=monLogin@gmail.com
->AuthPass=monbeauPaSsWoRd
->FromLineOverride=YES
->UseSTARTTLS=YES
+
+reboot
+
+# Check installation
+curl ... goHome
+curl ... motion
 
 
 ########################################################
-# h264 encoding (and others) 
-# Can/should be install on an other server as video encoding is painfull on rpi (see to_h264.sh)
-# libav-tools (fork from ffmpeg ) https://wiki.debian.org/ffmpeg
-sudo apt-get install libav-tools
 
-########################################################
-# webcam motion
-sudo apt-get install motion
+Done
 
-sudo chmod a+rwx /var/lib/motion
-sudo chown motion:motion /var/lib/motion
-sudo mkdir /var/log/motion
-sudo chown motion:motion /var/log/motion
-chmod a+rwx /usr/local/src/rpiDomotic/www/motion
 
-sudo vi /etc/default/motion
->start_motion_daemon=yes
 
-sudo cp /usr/local/src/rpiDomotic/script/motion.conf /etc/motion/motion.conf
 
-sudo usermod -a -G www-data motion
-sudo usermod -a -G motion www-data
-sudo chmod a+rw /var/data/rpiDomotic.log
 
-# Setup a systemd service with auto restart
-# Replace "sudo update-rc.d motion defaults"
-sudo rm /etc/init.d/motion
-sudo cp /usr/local/src/rpiDomotic/script/motion.service /lib/systemd/system/motion.service
-sudo systemctl daemon-reload
-sudo systemctl enable motion.service
 
-**********************************************
+
+
+
+

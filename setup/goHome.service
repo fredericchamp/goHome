@@ -21,7 +21,7 @@ User=pi
 
 # Added restart rpcbind + restart nfs as my ugly fix for : known debian bug :
 #    Job rpcbind.service/start deleted to break ordering cycle starting with basic.target/start
-ExecStartPre=/bin/systemctl restart rpcbind.service ; /bin/systemctl restart nfs-kernel-server.service
+#ExecStartPre=/bin/systemctl restart rpcbind.service ; /bin/systemctl restart nfs-kernel-server.service
 
 
 # Main cmd

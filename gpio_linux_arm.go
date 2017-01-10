@@ -5,11 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/golang/glog"
 	"github.com/stianeikeland/go-rpio"
 )
+
+// Prevent concurrent access to gpio
+var gpioLock sync.Mutex
 
 type GPIOParam struct {
 	Pin      int    // Pin number (BCM numbering)
@@ -45,6 +49,9 @@ func CallGPIO(param1 string, param2 string) (result string, err error) {
 	if glog.V(2) {
 		glog.Infof("CallGPIO : %v ", gpioParam)
 	}
+
+	gpioLock.Lock()
+	defer gpioLock.Unlock()
 
 	if err = rpio.Open(); err != nil {
 		glog.Errorf("rpio.Open failed : %s", err)

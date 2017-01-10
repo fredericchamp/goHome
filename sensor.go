@@ -144,6 +144,10 @@ func readSensorValue(sensor HomeObject) (result string, err error) {
 		result, err = ExecExternalCmd(readCmd, readParam, "")
 	}
 
+	if glog.V(2) {
+		glog.Infof("readSensorValue %d : %s", sensor.Values[0].IdObject, result)
+	}
+
 	return
 }
 
@@ -155,12 +159,7 @@ func readSensor(sensor HomeObject, ticker *time.Ticker) {
 			glog.Errorf("readSensor fail %s ", err)
 			continue
 		}
-
 		handleSensorValue(t, sensor, result)
-
-		if glog.V(2) {
-			glog.Infof("readSensor %d : %s", sensor.Values[0].IdObject, result)
-		}
 	}
 }
 
@@ -283,6 +282,10 @@ func triggerSensorAct(sensorAct HomeObject, sensorName string, prevVal string, l
 		actorId, err := sensorAct.getIntVal("idActor")
 		if err != nil {
 			return
+		}
+
+		if glog.V(1) {
+			glog.Infof("triggerSensorAct : launching Actor #%d", actorId)
 		}
 
 		triggerActorById(actorId, 1, actorParam)

@@ -61,7 +61,7 @@ func triggerObjActor(actor HomeObject, userId int, param string) (result string,
 	}
 
 	glog.Infof("Actor : user#%d : %s(%s) => %s", userId, actName, param, result)
-	if glog.V(1) {
+	if glog.V(2) {
 		glog.Infof("Actor : %s('%s','%s')", actCmd, actParam, param)
 	}
 

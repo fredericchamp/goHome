@@ -6,6 +6,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+
 	"github.com/golang/glog"
 	//	"time"
 	"fmt"
@@ -42,7 +43,9 @@ func CallGPIO(param1 string, param2 string) (result string, err error) {
 		return
 	}
 
-	glog.Infof("CallGPIO : %v ", gpioParam)
+	if glog.V(1) {
+		glog.Infof("CallGPIO : %v ", gpioParam)
+	}
 
 	return "Done", nil
 }

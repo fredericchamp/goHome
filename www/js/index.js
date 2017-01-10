@@ -707,6 +707,8 @@ function adminSaveObj() {
 
 $(document).ready(function(){
 
+	$("#goh-header").html("Utilisateur non reconnu");
+
 	// Read Reference lists
 	callServer(cReadRefList, { command:'ReadRefList', itemid:0, objectid:0, startts:0, endts:0, jsonparam:'%' });
 	// Read Item definition

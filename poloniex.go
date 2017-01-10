@@ -92,7 +92,7 @@ func GetPoloTicker(param1 string, param2 string) (result string, err error) {
 
 	result = oneTicker.Last
 	if glog.V(1) {
-		glog.Infof("GetPoloTicker (%s) (%s) = %s", param1, param2, result)
+		glog.Infof("GetPoloTicker %s = %s", param1, result)
 	}
 
 	return
@@ -176,7 +176,9 @@ func queryPolo(command string, poloKey PoloStruct, jsonParam string) (result []b
 		msg, found := objmap["error"]
 		if found {
 			err = errors.New(string(*msg))
-			glog.Error(err)
+			if glog.V(1) {
+				glog.Error(err)
+			}
 			// check for nonce error
 			if strings.Contains(string(*msg), nonceErrTag) {
 				lastNonceLock.Lock()

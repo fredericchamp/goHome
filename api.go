@@ -280,6 +280,20 @@ func fctApiSaveObject(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []b
 			glog.Errorf("fctApiSaveObject : sensor #%d update failed : %s", objIn.Values[0].IdObject, err)
 		}
 		break
+	case ItemSensorAct:
+		masterid, err := objIn.getIntVal("idMasterObj")
+		if err != nil {
+			glog.Errorf("fctApiSaveObject : idMasterObj fail : %s", err)
+		}
+		sensors, err := getHomeObjects(nil, ItemIdNone, masterid)
+		if err != nil {
+			glog.Errorf("fctApiSaveObject : sensorAct, read sensor %d failed : %s", masterid, err)
+		}
+		err = sensorUpdateTicker(sensors[0])
+		if err != nil {
+			glog.Errorf("fctApiSaveObject : sensor %d update failed : %s", masterid, err)
+		}
+		break
 	}
 
 	// return saved object

@@ -14,6 +14,11 @@ import (
 	"github.com/tarm/serial"
 )
 
+func init() {
+	RegisterInternalFunc(SensorFunc, "GsmIsUp", GsmIsUp)
+	RegisterInternalFunc(ActorFunc, "GsmRestart", GsmRestart)
+}
+
 const (
 	deviceBaud = 9600
 	AT_OK      = "OK\r" // "\nOK\r" may be better for production
@@ -73,14 +78,6 @@ func gsmSetup(db *sql.DB) (err error) {
 		return
 	}
 
-	if err = gsmRegister(); err != nil {
-		glog.Errorf("gsmSetup : %s => GSM disable", err)
-		err = nil
-		gsmDevice = ""
-		gsmPort = nil
-		return
-	}
-
 	if glog.V(1) {
 		glog.Infof("gsmSetup Done")
 	}
@@ -130,6 +127,41 @@ func gsmActor(db *sql.DB, actorParam string) (err error) {
 	}
 
 	_, err = triggerActorById(actorId, -1, "")
+
+	return
+}
+
+//
+func GsmIsUp(param1 string, param2 string) (result string, err error) {
+	if err = gsmSendCmdAT("AT\r", AT_OK, time.Millisecond*1500); err != nil {
+		result = "No"
+	} else {
+		result = "Yes"
+	}
+	return
+}
+
+//
+func GsmRestart(param1 string, param2 string) (result string, err error) {
+	db, err := openDB()
+	if err != nil {
+		return
+	}
+	defer db.Close()
+
+	// Hard reset
+	if err = gsmActorReset(db); err != nil {
+		result = "Fail"
+		return
+	}
+
+	// Wait for device to start
+	time.Sleep(time.Second * 9)
+
+	if err = gsmActivate(db); err != nil {
+		result = "Fail"
+		return
+	}
 
 	return
 }
@@ -218,51 +250,16 @@ func gsmActivate(db *sql.DB) (err error) {
 		return
 	}
 
-	if glog.V(1) {
-		glog.Infof("gsmActivate => Device is ready")
-	}
-
-	return
-}
-
-//
-func gsmRegister() (err error) {
 	// Register to the network
 	// response: "+CREG: 0,1" or "+CREG: 0,2" or "+CREG: 0,5"
 	if err = gsmSendCmdAT("AT+CREG?\r", AT_OK, time.Second*5); err != nil {
-		err = errors.New("gsmRegister failed")
+		err = errors.New("gsmActivate failed (register)")
 		glog.Error(err.Error())
 		return
 	}
-	return
-}
 
-//
-func gsmReset() (err error) {
-	db, err := openDB()
-	if err != nil {
-		return
-	}
-	defer db.Close()
-
-	// Hard reset
-	if err = gsmActorReset(db); err != nil {
-		return
-	}
-
-	// Wait for device to start
-	time.Sleep(time.Second * 9)
-
-	// Check
-	if err = gsmSendCmdAT("AT\r", AT_OK, time.Millisecond*1500); err != nil {
-		// No response, try Device activation
-		if err = gsmActivate(db); err != nil {
-			return
-		}
-	}
-
-	if err = gsmRegister(); err != nil {
-		return
+	if glog.V(1) {
+		glog.Infof("gsmActivate => Device is ready")
 	}
 
 	return
@@ -374,12 +371,15 @@ func SerialATSMS(serialPort string, phoneNum string, message string) (result str
 
 	// \x1a == (char)26 == ^Z
 	if err = gsmSendCmdAT(message+"\x1a\r", AT_OK, time.Second*10); err != nil {
-		gsmReset() // Try reset to prepare next try
-		result = "Fail"
+		result, err = GsmRestart("", "") // Try restart to prepare next try
 		return
 	}
 
 	result = "Done"
+
+	if glog.V(1) {
+		glog.Infof("SerialATSMS to %s : '%s'", phoneNum, message)
+	}
 
 	return
 }
