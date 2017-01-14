@@ -50,6 +50,10 @@ sudo apt-get install libav-tools
 # webcam motion detection and streaming
 sudo apt-get install motion
 
+# Start at boot time + auto restart
+# See .../goHome/script/setup.sh : motion.service + systemctl setup
+
+
 #
 # Go lang
 #

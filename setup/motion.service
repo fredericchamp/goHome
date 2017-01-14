@@ -23,8 +23,6 @@ Type=simple
 # User to run the daemon
 User=pi
 
-PIDFile=/var/log/motion/motion.pid
-
 # Main cmd
 ExecStart=/usr/bin/motion -m
 

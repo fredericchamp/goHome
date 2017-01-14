@@ -113,7 +113,8 @@ func doBackup() {
 
 	// Build archive backup file if "archive" parameter is present
 	// TODO : add hostname to archive file name
-	archiveName := fmt.Sprintf("%s_%s", time.Now().Format("20060102_150405"), "goHome.tar.gz")
+	hostname, _ := os.Hostname()
+	archiveName := fmt.Sprintf("%s.%s.%s", time.Now().Format("20060102_150405"), hostname, "goHome.tar.gz")
 	archiveName = filepath.Join(os.TempDir(), archiveName)
 
 	cmd, archExist := backupParam["archive"]

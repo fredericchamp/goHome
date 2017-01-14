@@ -134,9 +134,9 @@ func gsmActor(db *sql.DB, actorParam string) (err error) {
 //
 func GsmIsUp(param1 string, param2 string) (result string, err error) {
 	if err = gsmSendCmdAT("AT\r", AT_OK, time.Millisecond*1500); err != nil {
-		result = "No"
+		result = "0"
 	} else {
-		result = "Yes"
+		result = "1"
 	}
 	return
 }
@@ -331,19 +331,22 @@ func gsmSendCmdAT(cmdAT string, cr string, timeout time.Duration) (err error) {
 	defer gsmPortLock.Unlock()
 
 	// Empty serial buffer
-	gsmPort.Flush()
+	if err = gsmPort.Flush(); err != nil {
+		glog.Errorf("gsmSendCmdAT Flush fail : %s", err)
+		return
+	}
 	gsmWaitForCR("XXXXX", time.Millisecond*100)
 
 	// Send AT command
 	n, err := gsmPort.Write([]byte(cmdAT))
 	if err != nil || n != len(cmdAT) {
-		glog.Errorf("gsmSendCmdAT Write failed : %s", err)
+		glog.Errorf("gsmSendCmdAT Write fail : %s", err)
 		return
 	}
 
 	// Wait for GSM module answer or timeout
 	if err = gsmWaitForCR(cr, timeout); err != nil {
-		glog.Errorf("gsmSendCmdAT failed : %s", err)
+		glog.Errorf("gsmSendCmdAT fail : %s", err)
 		return
 	}
 

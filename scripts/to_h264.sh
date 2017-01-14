@@ -4,7 +4,7 @@
 #
 
 BASEDIR=/var/goHome
-LOGFILE=${BASEDIR}/log/goHome.INFO
+LOGFILE=${BASEDIR}/log/transcode.log
 DESTDIR=${BASEDIR}/motion/capture
 
 #############################################
@@ -53,6 +53,12 @@ then
 	echo "" >> ${LOGFILE}
 	exit 1
 fi
+
+#############################################
+# Cleanup : remove source file
+#
+
+rm -f ${SRCFILE}
 
 #############################################
 # Finish

@@ -68,17 +68,13 @@ fi
 if [ ! -d ${VAR_DIR}/motion/capture ]
 then
 	mkdir ${VAR_DIR}/motion/capture
-	ln -s ${VAR_DIR}/motion/capture ${VAR_DIR}/www/motion
+	ln -s ${VAR_DIR}/motion/capture ${VAR_DIR}/www/capture
 fi
 if [ ! -d ${VAR_DIR}/motion/log ]
 then
 	mkdir ${VAR_DIR}/motion/log
 fi
-if [ ! -d ${VAR_DIR}/motion/target_dir ]
-then
-	mkdir ${VAR_DIR}/motion/target_dir
-fi
-sudo rm /etc/motion/motion.conf
+sudo rm -f /etc/motion/motion.conf
 sudo ln -s ${SRC_DIR}/setup/motion.conf /etc/motion/motion.conf
 
 
