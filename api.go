@@ -54,6 +54,7 @@ func apiResponse(msgName string, msgText string) (apiResp []byte) {
 
 func apiError(errMsg string) (apiResp []byte) {
 	apiResp = apiResponse("error", errMsg)
+	glog.Error(errMsg)
 	return
 }
 
@@ -202,7 +203,7 @@ func fctApiReadActorRes(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp [
 }
 
 func fctApiSaveObject(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []byte) {
-	var objIn HomeObject
+	var objIn, objPrev HomeObject
 	if err := json.Unmarshal([]byte(jsonCmde.Jsonparam), &objIn); err != nil {
 		apiResp = apiError(fmt.Sprintf("%s fail to unmarshal jsonparam (%s) : %s", jsonCmde.Command, jsonCmde.Jsonparam, err))
 		return
@@ -243,6 +244,7 @@ func fctApiSaveObject(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []b
 			apiResp = apiError(err.Error())
 			return
 		}
+		objPrev = objs[0]
 		objIn.Fields = objs[0].Fields
 	} else {
 		// else it's an INSERT => fetch fields definition
@@ -285,9 +287,27 @@ func fctApiSaveObject(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []b
 		if err != nil {
 			glog.Errorf("fctApiSaveObject : idMasterObj fail : %s", err)
 		}
+		if objectid > 0 {
+			// It's an update, check if master have change
+			masteridprev, err := objPrev.getIntVal("idMasterObj")
+			if err != nil {
+				glog.Errorf("fctApiSaveObject : idMasterObj prev fail : %s", err)
+			}
+			if masterid != masteridprev {
+				// Prev master need update so current snesorAct get remove from it list
+				sensors, err := getHomeObjects(nil, ItemIdNone, masteridprev)
+				if err != nil {
+					glog.Errorf("fctApiSaveObject : sensorAct, read sensor %d fail : %s", masteridprev, err)
+				}
+				err = sensorUpdateTicker(sensors[0])
+				if err != nil {
+					glog.Errorf("fctApiSaveObject : sensor %d update failed : %s", masteridprev, err)
+				}
+			}
+		}
 		sensors, err := getHomeObjects(nil, ItemIdNone, masterid)
 		if err != nil {
-			glog.Errorf("fctApiSaveObject : sensorAct, read sensor %d failed : %s", masterid, err)
+			glog.Errorf("fctApiSaveObject : sensorAct, read sensor %d fail : %s", masterid, err)
 		}
 		err = sensorUpdateTicker(sensors[0])
 		if err != nil {

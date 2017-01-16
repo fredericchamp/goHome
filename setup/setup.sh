@@ -68,6 +68,7 @@ fi
 if [ ! -d ${VAR_DIR}/motion/capture ]
 then
 	mkdir ${VAR_DIR}/motion/capture
+	rm -f ${VAR_DIR}/www/capture
 	ln -s ${VAR_DIR}/motion/capture ${VAR_DIR}/www/capture
 fi
 if [ ! -d ${VAR_DIR}/motion/log ]
@@ -79,8 +80,12 @@ sudo ln -s ${SRC_DIR}/setup/motion.conf /etc/motion/motion.conf
 
 
 # Install systemd service
-sudo rm /etc/init.d/motion
-sudo rm /run/systemd/generator.late/motion.service
+if [ -f /etc/init.d/motion ]
+then
+	sudo rm /etc/init.d/motion
+	sudo rm /run/systemd/generator.late/motion.service
+fi
+
 sudo cp ${SRC_DIR}/setup/motion.service /etc/systemd/system/motion.service
 sudo cp ${SRC_DIR}/setup/goHome.service /etc/systemd/system/goHome.service
 sudo systemctl daemon-reload

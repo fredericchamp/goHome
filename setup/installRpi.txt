@@ -48,11 +48,17 @@ sudo cp rpi-clone/rpi-clone /usr/local/bin/rpi-clone
 sudo apt-get install libav-tools
 
 # webcam motion detection and streaming
+# Start at boot time + auto restart
+# See .../goHome/setup/setup.sh : motion.service + systemctl setup
 sudo apt-get install motion
 
-# Start at boot time + auto restart
-# See .../goHome/script/setup.sh : motion.service + systemctl setup
+# Image convert (see .../goHome/script/newSnap.sh)
+sudo apt-get install imagemagick
 
+# Recommanded for easy disk mount
+apt-get install sshfs
+# Mount : sshfs remote-username@remote-server-name:<remote dir> <local mount point>
+# Umount : fusermount -u <local mount point>
 
 #
 # Go lang

@@ -241,6 +241,12 @@ func recordSensorValue(t time.Time, sensor HomeObject, value string) {
 func triggerSensorAct(sensorAct HomeObject, sensorName string, prevVal string, lastVal string) {
 	sensorActId := sensorAct.getId()
 
+	// Check IsActive
+	isActive, err := sensorAct.getStrVal("IsActive")
+	if err != nil || isActive != "1" {
+		return
+	}
+
 	// Prepare condition
 	condition, err := sensorAct.getStrVal("Condition")
 	if err != nil {

@@ -418,7 +418,7 @@ function gohImgSensors() {
 
 function showImgSensorReading(idx) {
 	var src = getObjVal(fc.imgSensorList[idx],"Param");
-	$('#imgsensorsrc').attr('src', src );
+	$('#imgsensorsrc').attr('src' , src + '?cache=' + Math.random() );
 	$('#imgsensortitle').html(src);
 	$('#imgsensor').show();
 }

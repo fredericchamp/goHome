@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"strconv"
 
 	"github.com/golang/glog"
 )
@@ -233,21 +232,9 @@ func startHTTPS(chanExit chan bool) {
 		glog.Infof("FileServer root dir = '%s'", fileServerRoot)
 	}
 
-	serverName, err := getGlobalParam(db, "Http", "server_ip")
+	strPortNum, err := getGlobalParam(db, "Http", "https_port")
 	if err != nil {
 		glog.Errorf("Error in startHTTPS ... exiting : %s", err)
-		chanExit <- true
-		return
-	}
-	value, err := getGlobalParam(db, "Http", "https_port")
-	if err != nil {
-		glog.Errorf("Error in startHTTPS ... exiting : %s", err)
-		chanExit <- true
-		return
-	}
-	port, err := strconv.Atoi(value)
-	if err != nil {
-		glog.Errorf("Error converting port# (%s) ... exiting : %s", value, err)
 		chanExit <- true
 		return
 	}
@@ -329,14 +316,14 @@ func startHTTPS(chanExit chan bool) {
 	tlsConfig.BuildNameToCertificate()
 
 	server := &http.Server{
-		Addr:      fmt.Sprintf("%s:%d", serverName, port),
+		Addr:      ":" + strPortNum,
 		Handler:   serverMux,
 		TLSConfig: tlsConfig,
 		// TODO : use custom logger => ErrorLog: goHomeHttpLogger,
 	}
 
 	if glog.V(1) {
-		glog.Infof("Starting ListenAndServeTLS (https://%s:%d)", serverName, port)
+		glog.Infof("Starting ListenAndServeTLS (https://*:%s)", strPortNum)
 	}
 
 	if err = server.ListenAndServeTLS(serverCrtFileName, serverKeyFileName); err != nil {
