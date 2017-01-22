@@ -13,6 +13,14 @@ import (
 	"github.com/huin/goupnp/dcps/internetgateway1"
 )
 
+// -----------------------------------------------
+
+const (
+	TagLocalHost = "@localhost@"
+)
+
+// -----------------------------------------------
+
 type PortMapping struct {
 	srcPort  uint16
 	destPort uint16
@@ -20,10 +28,16 @@ type PortMapping struct {
 	protocol string
 }
 
+// -----------------------------------------------
+
 var mappingLock sync.Mutex
 var mappingTab []PortMapping
 
 var clientIGD *internetgateway1.WANIPConnection1
+
+var localIP string
+
+// -----------------------------------------------
 
 func init() {
 	RegisterInternalFunc(SensorFunc, "GetExternalIP", GetExternalIP)
@@ -34,6 +48,12 @@ func upnpSetup(db *sql.DB) (err error) {
 
 	if glog.V(1) {
 		glog.Infof("upnpSetup Start")
+	}
+
+	localIP, err = GetOutboundIP()
+	if err != nil {
+		glog.Errorf("GetOutboundIP fail : %s", err)
+		return
 	}
 
 	rootDevices, err := goupnp.DiscoverDevices("urn:schemas-upnp-org:device:InternetGatewayDevice:1")
@@ -94,7 +114,8 @@ func upnpSetup(db *sql.DB) (err error) {
 			glog.Errorf("Bad dest port number (%s) : ", dest[1], err)
 			continue
 		}
-		addPortMapping(PortMapping{uint16(srcPort), uint16(destPort), dest[0], "TCP"})
+		destHost := strings.Replace(dest[0], TagLocalHost, localIP, -1)
+		addPortMapping(PortMapping{uint16(srcPort), uint16(destPort), destHost, "TCP"})
 
 	}
 

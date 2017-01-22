@@ -130,14 +130,26 @@ curl ... motion
 
 
 ########################################################
+# Secure ssh acces (no password)
+#
 
-Done
+sudo apt-get install libpam-google-authenticator
 
+# Create key
+$ google-authenticator 
 
+# Config example : add at the beging of /etc/pam.d/sshd
 
+# if Google Authenticator Ok then return OK
+auth   sufficient  /lib/security/pam_google_authenticator.so
+# if fail then KO and pan_deny always fail
+auth   requisite   pam_deny.so
 
+# In /etc/ssh/sshd_config check :
+# ChallengeResponseAuthentication no
 
-
+# Restart ssh service
+sudo systemctl restart ssh.service
 
 
 

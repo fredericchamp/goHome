@@ -137,7 +137,14 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		if glog.V(1) {
 			glog.Infof("%s (objectid=%d)", jsonCmde.Command, jsonCmde.Objectid)
 		}
-		w.Write(fctApiReadSensor(profil, jsonCmde))
+		w.Write(fctApiGetSensorVal(profil, jsonCmde, true))
+		return
+
+	case apiGetSensorLastVal:
+		if glog.V(1) {
+			glog.Infof("%s (objectid=%d)", jsonCmde.Command, jsonCmde.Objectid)
+		}
+		w.Write(fctApiGetSensorVal(profil, jsonCmde, false))
 		return
 
 	case apiReadHistoVal:

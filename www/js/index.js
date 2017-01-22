@@ -1,15 +1,16 @@
 
-const cReadRefList     =   1;
-const cReadItem        =   2;
-const cReadUsers       =  10;
-const cReadCurrentUser =  11;
-const cReadActors      =  20;
-const cReadImgSensor   =  30;
-const cReadSensor      =  40;
-const cReadSensorVal   =  41;
-const cReadSensorAct   =  50;
-const cTriggerActor    = 100;
-const cSaveObject      = 200;
+const cReadRefList      =   1;
+const cReadItem         =   2;
+const cReadUsers        =  10;
+const cReadCurrentUser  =  11;
+const cReadActors       =  20;
+const cReadImgSensor    =  30;
+const cReadSensor       =  40;
+const cReadSensorVal    =  41;
+const cGetSensorLastVal =  42;
+const cReadSensorAct    =  50;
+const cTriggerActor     = 100;
+const cSaveObject       = 200;
 
 const DBTypeNone       = 0;
 const DBTypeBool       = 1;
@@ -311,6 +312,7 @@ function callServer(action,cmde){
 			gohAdminTab();
 			break;
 		case cReadSensorVal:
+		case cGetSensorLastVal:
 			// TODO check if data != '{"error":"....."}'
 			var sensorVal = $.parseJSON(data);
 			var sensor = getObjById(fc.sensorList,cmde.objectid);
@@ -460,7 +462,7 @@ function gohSensorTr() {
 		}
 	}
 	for (i = 0; i < fc.sensorList.length; i++) {
-		readSensorVal(fc.sensorList[i].Values[0].IdObject);
+		getSensorLastVal(fc.sensorList[i].Values[0].IdObject);
 	}
 	$("#goh-sensor-row").html(html);
 }
@@ -468,6 +470,10 @@ function gohSensorTr() {
 
 function readSensorVal(sensorId) {
 	callServer(cReadSensorVal,{command:'ReadSensor', itemid:0, objectid:sensorId, startts:0, endts:0, jsonparam:''});
+}
+
+function getSensorLastVal(sensorId) {
+	callServer(cGetSensorLastVal,{command:'GetSensorLastVal', itemid:0, objectid:sensorId, startts:0, endts:0, jsonparam:''});
 }
 
 // ---------------------------

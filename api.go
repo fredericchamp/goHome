@@ -16,19 +16,20 @@ import (
 type apiCommand string
 
 const (
-	apiReadRefList     apiCommand = "ReadRefList"
-	apiReadCurrentUser            = "ReadCurrentUser"
-	apiReadItem                   = "ReadItem"
-	apiReadObject                 = "ReadObject"
-	apiReadSensor                 = "ReadSensor"
-	apiReadHistoVal               = "ReadHistoVal"
-	apiReadActorRes               = "ReadActorRes"
-	apiSaveItem                   = "SaveItems"
-	apiSaveObject                 = "SaveObject"
-	apiDeleteItem                 = "DeleteItems"
-	apiDeleteObject               = "DeleteObject"
-	apiSendSensorVal              = "SendSensorVal"
-	apiTriggerActor               = "TriggerActor"
+	apiReadRefList      apiCommand = "ReadRefList"
+	apiReadCurrentUser             = "ReadCurrentUser"
+	apiReadItem                    = "ReadItem"
+	apiReadObject                  = "ReadObject"
+	apiReadSensor                  = "ReadSensor"
+	apiGetSensorLastVal            = "GetSensorLastVal"
+	apiReadHistoVal                = "ReadHistoVal"
+	apiReadActorRes                = "ReadActorRes"
+	apiSaveItem                    = "SaveItems"
+	apiSaveObject                  = "SaveObject"
+	apiDeleteItem                  = "DeleteItems"
+	apiDeleteObject                = "DeleteObject"
+	apiSendSensorVal               = "SendSensorVal"
+	apiTriggerActor                = "TriggerActor"
 )
 
 type apiCommandSruct struct {
@@ -116,7 +117,7 @@ func fctApiReadObject(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []b
 	return
 }
 
-func fctApiReadSensor(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []byte) {
+func fctApiGetSensorVal(profil TUserProfil, jsonCmde apiCommandSruct, read bool) (apiResp []byte) {
 	objs, err := getHomeObjects(nil, ItemIdNone, jsonCmde.Objectid)
 	if err != nil {
 		apiResp = apiError(fmt.Sprintf("%s failed for (obj=%d) : %s", jsonCmde.Command, jsonCmde.Objectid, err))
@@ -134,7 +135,12 @@ func fctApiReadSensor(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []b
 		return
 	}
 
-	value, err := readSensorValue(sensor)
+	var value string
+	if read {
+		value, err = readSensorValue(sensor)
+	} else {
+		value, err = getSensorLastValue(sensor)
+	}
 	if err != nil {
 		apiResp = apiError(fmt.Sprintf("%s failed for (obj=%d) : %s", jsonCmde.Command, jsonCmde.Objectid, err))
 		return

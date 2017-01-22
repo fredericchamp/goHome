@@ -35,7 +35,6 @@ insert into goHome values    ( 'Global', 'Version',         '0.1');
 insert into goHome values    ( 'Global', 'Email',           'admin@mydomain.net');
 insert into goHome values    ( 'Global', 'ServerName',      '-SrvName-');
 -- Change to the real server IP
-insert into goHome values    ( 'Http',   'server_ip',       '192.168.1.20');
 insert into goHome values    ( 'Http',   'https_port',      '5100');
 insert into goHome values    ( 'Http',   'server_crt',      '/var/goHome/certificats/server.crt.pem');
 insert into goHome values    ( 'Http',   'server_key',      '/var/goHome/certificats/server.key.pem');
@@ -53,8 +52,7 @@ insert into goHome values    ( 'Backup', 'cleanup',         '/bin/rm -f @archive
 -- GSM Device reference
 insert into goHome values    ( 'GSM',    'device',          '/dev/ttyAMA0');
 -- UPnP parameters to allow access to the server if behind a router with NAT (UPnP must be enable on the router) -- update with desire port number
-insert into goHome select 'UPnP', '443', gs.val || ':' || gp.val from goHome gs, goHome gp where gs.perimeter = 'Http' and gs.name = 'server_ip' and gp.perimeter = 'Http' and gp.name = 'https_port';
-insert into goHome select 'UPnP', '22',  gs.val || ':' || '22'   from goHome gs where gs.perimeter = 'Http' and gs.name = 'server_ip';
+insert into goHome select 'UPnP', '443', '@localhost@:' || gp.val from goHome gp where gp.perimeter = 'Http' and gp.name = 'https_port';
 
 -- YN
 insert into RefValues values ('YN', '0', 'No');

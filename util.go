@@ -439,3 +439,24 @@ func smtpSendMail(mailInfo MailInfo) (result string, err error) {
 
 	return
 }
+
+// -----------------------------------------------
+// Local IP
+// -----------------------------------------------
+func GetOutboundIP() (localIP string, err error) {
+	conn, err := net.Dial("udp", "8.8.8.8:80") // any address would do
+	if err != nil {
+		return
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().String()
+	idx := strings.LastIndex(localAddr, ":")
+
+	localIP = localAddr[0:idx]
+
+	if glog.V(2) {
+		glog.Infof("Local IP : %s", localIP)
+	}
+	return
+}

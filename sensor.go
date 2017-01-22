@@ -151,6 +151,20 @@ func readSensorValue(sensor HomeObject) (result string, err error) {
 	return
 }
 
+// getSensorLastValue : return prev sensor value if any, else readSensor
+func getSensorLastValue(sensor HomeObject) (result string, err error) {
+	sensorPrevValLock.Lock()
+	result, found := sensorPrevVal[sensor.Values[0].IdObject]
+	sensorPrevValLock.Unlock()
+	if !found {
+		if glog.V(2) {
+			glog.Infof("getSensorLastValue no prev val for %d, reading sensor", sensor.Values[0].IdObject)
+		}
+		result, err = readSensorValue(sensor)
+	}
+	return
+}
+
 // readSensor : call readSensorValue according to corresponding ticker and handleSensorValue
 func readSensor(sensor HomeObject, ticker *time.Ticker) {
 	for t := range ticker.C {
