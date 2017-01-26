@@ -52,7 +52,12 @@ insert into goHome values    ( 'Backup', 'cleanup',         '/bin/rm -f @archive
 -- GSM Device reference
 insert into goHome values    ( 'GSM',    'device',          '/dev/ttyAMA0');
 -- UPnP parameters to allow access to the server if behind a router with NAT (UPnP must be enable on the router) -- update with desire port number
-insert into goHome select 'UPnP', '443', '@localhost@:' || gp.val from goHome gp where gp.perimeter = 'Http' and gp.name = 'https_port';
+insert into goHome select 'UPnP', '8080', '@localhost@:' || gp.val from goHome gp where gp.perimeter = 'Http' and gp.name = 'https_port';
+-- Proxy for IP webcam
+insert into goHome values ( 'Proxy', '/nexus/', 'http://192.168.1.5:8080' );
+-- Proxy for USB local webcam (working with motion running)
+insert into goHome values ( 'Proxy', '/sous-sol/', 'http://127.0.0.1:8081' ); -- 8081=mjpeg ; 8080=controls
+
 
 -- YN
 insert into RefValues values ('YN', '0', 'No');
@@ -156,7 +161,7 @@ insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'IsAct
 insert into ItemFieldVal select max(v.idObject)+1, f.idField, 'images/person.png' from ItemFieldVal v, ItemField f, Item i where f.name='ImgFileName' and i.name='User' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, 'System'            from ItemFieldVal v, ItemField f, Item i where f.name='FirstName'   and i.name='User' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, 'Administrator'     from ItemFieldVal v, ItemField f, Item i where f.name='LastName'    and i.name='User' and f.idItem = i.idItem group by f.nOrder;
-insert into ItemFieldVal select max(v.idObject)  , f.idField, 'admin@goHome.com'  from ItemFieldVal v, ItemField f, Item i where f.name='Email'       and i.name='User' and f.idItem = i.idItem group by f.nOrder;
+insert into ItemFieldVal select max(v.idObject)  , f.idField, 'un@goHome.goHome'  from ItemFieldVal v, ItemField f, Item i where f.name='Email'       and i.name='User' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1234567890'        from ItemFieldVal v, ItemField f, Item i where f.name='Phone'       and i.name='User' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                 from ItemFieldVal v, ItemField f, Item i where f.name='IdProfil'    and i.name='User' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                 from ItemFieldVal v, ItemField f, Item i where f.name='IsActive'    and i.name='User' and f.idItem = i.idItem group by f.nOrder;
@@ -293,7 +298,7 @@ insert into ItemFieldVal select max(v.idObject)  , f.idField, av.idObject      f
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '@lastVal@ < @prevVal@' from ItemFieldVal v, ItemField f, Item i where f.name='Condition'   and i.name='SensorAct' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '0123123456789|Alarm maison (@lastVal@)' from ItemFieldVal v, ItemField f, Item i where f.name='ActorParam'  and i.name='SensorAct' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'              from ItemFieldVal v, ItemField f, Item i where f.name='IsActive'    and i.name='SensorAct' and f.idItem = i.idItem group by f.nOrder;
--- SensorAct : is Alarm in Off (read 1) and alarm was off (@lastVal@ > @prevVal@) => sens SMS "Alarm end"
+-- SensorAct : is Alarm in Off (read 1) and alarm was on (@lastVal@ > @prevVal@) => sens SMS "Alarm end"
 insert into ItemFieldVal select max(v.idObject)+1, f.idField, mv.idObject      from ItemFieldVal mv, ItemField mf, Item mi, ItemFieldVal v, ItemField f, Item i where f.name='idMasterObj' and i.name='SensorAct' and f.idItem = i.idItem and mv.idfield = mv.idfield and mv.val='Alarm'   and mf.name='Name' and mf.idItem = mi.idItem and mi.name = 'Sensor' group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, av.idObject      from ItemFieldVal av, ItemField af, Item ai, ItemFieldVal v, ItemField f, Item i where f.name='idActor'     and i.name='SensorAct' and f.idItem = i.idItem and av.idfield = av.idfield and av.val='SendSMS' and af.name='Name' and af.idItem = ai.idItem and ai.name = 'Actor'  group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '@lastVal@ > @prevVal@' from ItemFieldVal v, ItemField f, Item i where f.name='Condition'   and i.name='SensorAct' and f.idItem = i.idItem group by f.nOrder;
@@ -375,7 +380,7 @@ insert into ItemFieldVal select max(v.idObject)  , f.idField, '/sous-sol/video0'
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                 from ItemFieldVal v, ItemField f, Item i where f.name='IsVisible'   and i.name='Image Sensor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                 from ItemFieldVal v, ItemField f, Item i where f.name='IsActive'    and i.name='Image Sensor' and f.idItem = i.idItem group by f.nOrder;
 
--- Image Sensor : Add USB webcam : vien snapshot
+-- Image Sensor : Add USB webcam : view snapshot
 insert into ItemFieldVal select max(v.idObject)+1, f.idField, 'images/alarm.png'  from ItemFieldVal v, ItemField f, Item i where f.name='ImgFileName' and i.name='Image Sensor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, 'Alarm'             from ItemFieldVal v, ItemField f, Item i where f.name='Name'        and i.name='Image Sensor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '2'                 from ItemFieldVal v, ItemField f, Item i where f.name='IdProfil'    and i.name='Image Sensor' and f.idItem = i.idItem group by f.nOrder;

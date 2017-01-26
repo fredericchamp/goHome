@@ -56,7 +56,7 @@ sudo apt-get install motion
 sudo apt-get install imagemagick
 
 # Recommanded for easy disk mount
-apt-get install sshfs
+sudo apt-get install sshfs
 # Mount : sshfs remote-username@remote-server-name:<remote dir> <local mount point>
 # Umount : fusermount -u <local mount point>
 
@@ -122,15 +122,16 @@ ${GOPATH}/src/github.com/fredericchamp/goHome/setup/setup.sh
 
 
 
-reboot
+sudo reboot
 
 # Check installation
 curl ... goHome
 curl ... motion
 
 
+
 ########################################################
-# Secure ssh acces (no password)
+# ssh acces : replace password with totp)
 #
 
 sudo apt-get install libpam-google-authenticator
