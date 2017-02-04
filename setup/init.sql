@@ -49,14 +49,14 @@ insert into goHome values    ( 'Backup', 'files_3',         '/usr/bin/rsync -axv
 insert into goHome values    ( 'Backup', 'archive',         '/bin/tar cvfah @archiveName@ -C @backupDir@ .');
 insert into goHome values    ( 'Backup', 'externalize',     '/usr/bin/curl -s --disable-epsv -T"@archiveName@" -u"$USERNAME:$PASSWORD" "ftp://$SERVER$DESTDIR/"');
 insert into goHome values    ( 'Backup', 'cleanup',         '/bin/rm -f @archiveName@');
--- GSM Device reference
-insert into goHome values    ( 'GSM',    'device',          '/dev/ttyAMA0');
 -- UPnP parameters to allow access to the server if behind a router with NAT (UPnP must be enable on the router) -- update with desire port number
 insert into goHome select 'UPnP', '8080', '@localhost@:' || gp.val from goHome gp where gp.perimeter = 'Http' and gp.name = 'https_port';
 -- Proxy for IP webcam
 insert into goHome values ( 'Proxy', '/nexus/', 'http://192.168.1.5:8080' );
 -- Proxy for USB local webcam (working with motion running)
 insert into goHome values ( 'Proxy', '/sous-sol/', 'http://127.0.0.1:8081' ); -- 8081=mjpeg ; 8080=controls
+-- GSM Device reference
+insert into goHome values    ( 'GSM',    'device',          '/dev/ttyAMA0');
 
 
 -- YN
@@ -86,6 +86,8 @@ insert into RefValues values ('DynParamT', '3', 'Float');
 insert into RefValues values ('DynParamT', '4', 'Text');
 insert into RefValues values ('DynParamT', '5', 'DateTime');
 insert into RefValues values ('DynParamT', '6', 'URL');
+insert into RefValues values ('DynParamT', '7', 'Email');
+insert into RefValues values ('DynParamT', '8', 'Tel');
 -- email
 insert into RefValues values ('email', '-1', '^[a-zA-Z0-9.\-_]*(@)[a-zA-Z0-9.\-_]*(\.)[a-zA-Z]{2,}$');
 -- url
@@ -390,3 +392,28 @@ insert into ItemFieldVal select max(v.idObject)  , f.idField, '/capture/alarm.jp
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                 from ItemFieldVal v, ItemField f, Item i where f.name='IsVisible'   and i.name='Image Sensor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                 from ItemFieldVal v, ItemField f, Item i where f.name='IsActive'    and i.name='Image Sensor' and f.idItem = i.idItem group by f.nOrder;
 
+
+List param
+P1 tel
+P2 text
+P3 mail
+
+Link param actor
+idActor - idParam - iOrder
+
+
+insert into Item values ( 6, 'Parameter', 1, 0, '' );
+insert into Item values ( 7, 'ParamLink', 1, 0, '' );
+--create table ItemField (idField integer not null primary key, idItem integer not null, nOrder integer not null, Name text, idDataType not null, Label text, Helper text, UniqKey integer, Required integer, RefList text, Regexp text );
+
+-- HomeObj definition : Parameter
+insert into ItemField select max(f.idField)+1, i.idItem, 1,               'Label',        4, 'Display label',       'label for input form',    0, 1, '',           '' from ItemField f, Item i where i.name='Parameter'                         group by i.idItem;
+insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'Name',         4, 'Name',                'parameter name (unique)', 1, 1, '',           ''    from ItemField f, Item i where i.name='Parameter' and f.idItem = i.idItem group by i.idItem;
+insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'IdProfil',     2, 'User profil',         'profil for access',       0, 1, 'UserProfil', ''    from ItemField f, Item i where i.name='Parameter' and f.idItem = i.idItem group by i.idItem;
+insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'DynParamType', 2, 'Runtime param. type', 'run time parameter type', 0, 1, 'DynParamT',  ''    from ItemField f, Item i where i.name='Parameter' and f.idItem = i.idItem group by i.idItem;
+
+-- HomeObj definition : SensorAct
+insert into ItemField select max(f.idField)+1, i.idItem, 1,               'idMasterObj', 2, 'Actor',    'linked actor', 0, 1, 'ActorList', '' from ItemField f, Item i where i.name='ParamLink'                         group by i.idItem;
+insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'idParam',     2, 'Paramter', 'linked param', 0, 1, 'ParamList', '' from ItemField f, Item i where i.name='ParamLink' and f.idItem = i.idItem group by i.idItem;
+insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'nOrder',      2, 'Position', 'order',        0, 0, '',          '' from ItemField f, Item i where i.name='ParamLink' and f.idItem = i.idItem group by i.idItem;
+insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'IsActive',    2, 'Active',   'status',       0, 1, 'YN',        '' from ItemField f, Item i where i.name='ParamLink' and f.idItem = i.idItem group by i.idItem;
