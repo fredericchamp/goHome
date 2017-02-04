@@ -391,29 +391,3 @@ insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'               
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '/capture/alarm.jpg' from ItemFieldVal v, ItemField f, Item i where f.name='Param'       and i.name='Image Sensor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                 from ItemFieldVal v, ItemField f, Item i where f.name='IsVisible'   and i.name='Image Sensor' and f.idItem = i.idItem group by f.nOrder;
 insert into ItemFieldVal select max(v.idObject)  , f.idField, '1'                 from ItemFieldVal v, ItemField f, Item i where f.name='IsActive'    and i.name='Image Sensor' and f.idItem = i.idItem group by f.nOrder;
-
-
-List param
-P1 tel
-P2 text
-P3 mail
-
-Link param actor
-idActor - idParam - iOrder
-
-
-insert into Item values ( 6, 'Parameter', 1, 0, '' );
-insert into Item values ( 7, 'ParamLink', 1, 0, '' );
---create table ItemField (idField integer not null primary key, idItem integer not null, nOrder integer not null, Name text, idDataType not null, Label text, Helper text, UniqKey integer, Required integer, RefList text, Regexp text );
-
--- HomeObj definition : Parameter
-insert into ItemField select max(f.idField)+1, i.idItem, 1,               'Label',        4, 'Display label',       'label for input form',    0, 1, '',           '' from ItemField f, Item i where i.name='Parameter'                         group by i.idItem;
-insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'Name',         4, 'Name',                'parameter name (unique)', 1, 1, '',           ''    from ItemField f, Item i where i.name='Parameter' and f.idItem = i.idItem group by i.idItem;
-insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'IdProfil',     2, 'User profil',         'profil for access',       0, 1, 'UserProfil', ''    from ItemField f, Item i where i.name='Parameter' and f.idItem = i.idItem group by i.idItem;
-insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'DynParamType', 2, 'Runtime param. type', 'run time parameter type', 0, 1, 'DynParamT',  ''    from ItemField f, Item i where i.name='Parameter' and f.idItem = i.idItem group by i.idItem;
-
--- HomeObj definition : SensorAct
-insert into ItemField select max(f.idField)+1, i.idItem, 1,               'idMasterObj', 2, 'Actor',    'linked actor', 0, 1, 'ActorList', '' from ItemField f, Item i where i.name='ParamLink'                         group by i.idItem;
-insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'idParam',     2, 'Paramter', 'linked param', 0, 1, 'ParamList', '' from ItemField f, Item i where i.name='ParamLink' and f.idItem = i.idItem group by i.idItem;
-insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'nOrder',      2, 'Position', 'order',        0, 0, '',          '' from ItemField f, Item i where i.name='ParamLink' and f.idItem = i.idItem group by i.idItem;
-insert into ItemField select max(f.idField)+1, i.idItem, max(f.nOrder)+1, 'IsActive',    2, 'Active',   'status',       0, 1, 'YN',        '' from ItemField f, Item i where i.name='ParamLink' and f.idItem = i.idItem group by i.idItem;
