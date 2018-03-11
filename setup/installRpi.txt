@@ -114,6 +114,11 @@ ${GOPATH}/src/github.com/fredericchamp/goHome/setup/setup.sh
 # Warning : pay attention to file access rights ! Any user with read access to the key can use a certificate
 # Default cert files are (can be change using parameter in DB)
 # .../goHome/certificats/server.crt.pem and .../goHome/certificats/server.key.pem
+#
+# For let's encrypt cert use : /etc/letsencrypt/live/<your domain>/fullchain.pem 
+#                        and : /etc/letsencrypt/live/<your domain>/privkey.pem
+#                        + : crontab : 0 0,12 * * * python -c 'import random; import time; time.sleep(random.random() * 3600)' && ./path/to/certbot-auto renew 
+
 
 # For client cert see .../goHome/certificats/clientCert.sh
 

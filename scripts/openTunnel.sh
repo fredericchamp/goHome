@@ -17,7 +17,7 @@ then
 fi
 
 # Open SSH Tunnel 
-/usr/bin/ssh $@
+/usr/bin/ssh $@ &
 RESULT=$?
 if [ ${RESULT} != 0 ]
 then

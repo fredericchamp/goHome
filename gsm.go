@@ -243,6 +243,13 @@ func gsmActivate(db *sql.DB) (err error) {
 		return
 	}
 
+	// delete messages from module memmory
+	if err = gsmSendCmdAT("AT+CMGD=1,4\r", AT_OK, time.Second*3); err != nil {
+		err = errors.New("gsmActivate failed (phonebook memory storage)")
+		glog.Error(err.Error())
+		return
+	}
+
 	// select phonebook memory storage
 	if err = gsmSendCmdAT("AT+CPBS=\"SM\"\r", AT_OK, time.Second*2); err != nil {
 		err = errors.New("gsmActivate failed (phonebook memory storage)")
