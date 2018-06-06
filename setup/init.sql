@@ -35,7 +35,7 @@ insert into goHome values    ( 'Global', 'Version',         '0.1');
 insert into goHome values    ( 'Global', 'Email',           'admin@mydomain.net');
 insert into goHome values    ( 'Global', 'ServerName',      '-SrvName-');
 -- Change to the real server IP
-insert into goHome values    ( 'Http',   'https_port',      '5100');
+insert into goHome values    ( 'Http',   'https_port',      '443');
 insert into goHome values    ( 'Http',   'server_crt',      '/var/goHome/certificats/server.crt.pem');
 insert into goHome values    ( 'Http',   'server_key',      '/var/goHome/certificats/server.key.pem');
 insert into goHome values    ( 'Http',   'ca_crt',          '/var/goHome/certificats/goHomeCAcert.pem');
