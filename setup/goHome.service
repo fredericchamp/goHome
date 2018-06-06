@@ -19,9 +19,8 @@ Type=simple
 # User to run the daemon
 User=pi
 
-# Added restart rpcbind + restart nfs as my ugly fix for : known debian bug :
-#    Job rpcbind.service/start deleted to break ordering cycle starting with basic.target/start
-#ExecStartPre=/bin/systemctl restart rpcbind.service ; /bin/systemctl restart nfs-kernel-server.service
+# Make sure the binary can open port under 1024
+#ExecStartPre=sudo setcap CAP_NET_BIND_SERVICE=+eip `readlink -f /usr/local/bin/goHome`
 
 
 # Main cmd
