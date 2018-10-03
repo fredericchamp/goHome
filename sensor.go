@@ -283,7 +283,9 @@ func triggerSensorAct(sensorAct HomeObject, sensorName string, prevVal string, l
 		if err != nil {
 			glog.Errorf("Fail to eval condition for sensorAct #%d (%s) '%s' : %s", sensorActId, sensorName, condition, err)
 		} else {
-			launchAct = constant.BoolVal(tv.Value)
+			if tv.Value != nil {
+				launchAct = constant.BoolVal(tv.Value)
+			}
 		}
 	}
 	if launchAct {

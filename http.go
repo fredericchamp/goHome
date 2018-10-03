@@ -232,6 +232,7 @@ func startHTTPS(chanExit chan bool) {
 
 	fileServerRoot, err := getGlobalParam(db, "Http", "fileserver_root")
 	if err != nil {
+		glog.Errorf("Error in startHTTPS ... exiting : %s", err)
 		chanExit <- true
 		return
 	}
