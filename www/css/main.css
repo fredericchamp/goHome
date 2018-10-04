@@ -29,54 +29,54 @@ div.goh-msg {
 	left:25%;
 	width:50%;
 	margin:auto;
-    z-index: 99;
+	z-index: 99;
 }
 
 div.hide {
-    display: none;
+	display: none;
 }
 
 
 div.mainheader {
 	text-align: center;
-    width: 100%;
+	width: 100%;
 	margin: 5px;
 }
 
 div.gray-out-page {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 50;
-    background: rgba(0, 0, 0, 0.5);
-    -webkit-overflow-scrolling: touch;
-    outline: 0;
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 50;
+	background: rgba(0, 0, 0, 0.5);
+	-webkit-overflow-scrolling: touch;
+	outline: 0;
 }
 div.form-panel {
-    position: relative;
-    top: 30px;
-    left: 10%;
-    width: 80%;
-    height: 90%;
-    z-index: 51;
-    opacity: 1;
-    overflow-x: hidden;
-    overflow-y: auto;
+	position: relative;
+	top: 30px;
+	left: 10%;
+	width: 80%;
+	height: 90%;
+	z-index: 51;
+	opacity: 1;
+	overflow-x: hidden;
+	overflow-y: auto;
 }
 
 span.ico {
-    float: left;
-    width: 55px;
+	float: left;
+	width: 55px;
 	margin: 5px;
 }
 
 img.icone{
-	width: 45px;
-	max-width: 45px;
-	height: 45px;
-	max-height: 45px;
+	width: 60px;
+	max-width: 60px;
+	height: 60px;
+	max-height: 60px;
 }
 
 img.iconesmall{

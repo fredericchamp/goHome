@@ -246,98 +246,96 @@ function readObjectLst( action ) {
 
 function callServer(action,cmde){
 	$.post("/api", { command:$.toJSON(cmde) }, function(data, status){
-		switch (action) {
-		case cReadRefList:
-			// TODO check if data != '{"error":"....."}'
-			if ( fc.refList == null ) {
-				fc.refList = new Object();
-			}
-			var lstAll = $.parseJSON(data);
-			var curName = lstAll[0].Name;
-			var oneList = new Array();
-			for ( i = 0; i < lstAll.length; i++) {
-				if ( curName == lstAll[i].Name ) {
-					oneList.push(lstAll[i]);
-				} else {
-					fc.refList[curName] = oneList;
-					curName = lstAll[i].Name
-					oneList = new Array();
-					oneList.push(lstAll[i]);
+		var retour = $.parseJSON(data);
+		if ( retour.error === undefined ) { // did not get data = '{"error":"....."}'
+			switch (action) {
+			case cReadRefList:
+				if ( fc.refList == null ) {
+					fc.refList = new Object();
 				}
+				var lstAll = $.parseJSON(data);
+				var curName = lstAll[0].Name;
+				var oneList = new Array();
+				for ( i = 0; i < lstAll.length; i++) {
+					if ( curName == lstAll[i].Name ) {
+						oneList.push(lstAll[i]);
+					} else {
+						fc.refList[curName] = oneList;
+						curName = lstAll[i].Name
+						oneList = new Array();
+						oneList.push(lstAll[i]);
+					}
+				}
+				fc.refList[curName] = oneList;
+				break;
+			case cReadItem:
+				fc.itemList = $.parseJSON(data);
+				break;
+			case cReadUsers:
+				fc.userList = $.parseJSON(data);
+				gohAdminTab();
+				break;
+			case cReadCurrentUser:
+				fc.currentUser = $.parseJSON(data);
+				gohHeader();
+				break;
+			case cReadActors:
+				fc.actorList = $.parseJSON(data);
+				if ( fc.refList == null ) {
+					fc.refList = new Object();
+				}
+				fc.refList['ActorList'] = refListFromNames('ActorList', fc.actorList);
+				gohActors();
+				gohAdminTab();
+				break;
+			case cReadImgSensor:
+				fc.imgSensorList = $.parseJSON(data);
+				gohImgSensors();
+				gohAdminTab();
+				break;
+			case cReadSensor:
+				fc.sensorList = $.parseJSON(data);
+				for (i = 0; i < fc.sensorList.length; i++) {
+					fc.sensorList[i].Ts='';
+					fc.sensorList[i].Val='';
+				}
+				if ( fc.refList == null ) {
+					fc.refList = new Object();
+				}
+				fc.refList['SensorList'] = refListFromNames('SensorList', fc.sensorList);
+				gohSensorTr();
+				gohAdminTab();
+				break;
+			case cReadSensorVal:
+			case cGetSensorLastVal:
+				var sensorVal = $.parseJSON(data);
+				var sensor = getObjById(fc.sensorList,cmde.objectid);
+				sensor.Ts = sensorVal.Ts;
+				sensor.Val = sensorVal.Val;
+				gohSensorTd(sensor.Values[0].IdObject, getObjVal(sensor,"ImgFileName"), getObjVal(sensor,"Name"), sensor.Ts, sensor.Val, true);
+				break;
+			case cReadSensorAct:
+				fc.sensorActList = $.parseJSON(data);
+				gohAdminTab();
+				break;
+			case cSaveObject:
+				// Reload Objects from server, this will update GUI as well
+				setTimeout(function() { readObjectLst( getReadForItemId(cmde.itemid) ); }, 100);
+				break;
+			case cTriggerActor:
+				gohMessage( retour.response, 'success', 1500);
+				break;
+			default:
+				gohMessage('callServer : action inconnue (' + action + ')', 'danger',3000);
+				break;
 			}
-			fc.refList[curName] = oneList;
-			break;
-		case cReadItem:
-			// TODO check if data != '{"error":"....."}'
-			fc.itemList = $.parseJSON(data);
-			break;
-		case cReadUsers:
-			// TODO check if data != '{"error":"....."}'
-			fc.userList = $.parseJSON(data);
-			gohAdminTab();
-			break;
-		case cReadCurrentUser:
-			// TODO check if data != '{"error":"....."}'
-			fc.currentUser = $.parseJSON(data);
-			gohHeader();
-			break;
-		case cReadActors:
-			// TODO check if data != '{"error":"....."}'
-			fc.actorList = $.parseJSON(data);
-			if ( fc.refList == null ) {
-				fc.refList = new Object();
+		} else {
+			if ( getObjVal(fc.currentUser,"IdProfil") == "1" ) {
+				var message=data.replace( "{", " { " );
+				message=message.replace( "}", " } " );
+				message=message.replace( ":", " : " );
+				gohMessage( message , 'danger', 3000);
 			}
-			fc.refList['ActorList'] = refListFromNames('ActorList', fc.actorList);
-			gohActors();
-			gohAdminTab();
-			break;
-		case cReadImgSensor:
-			// TODO check if data != '{"error":"....."}'
-			fc.imgSensorList = $.parseJSON(data);
-			gohImgSensors();
-			gohAdminTab();
-			break;
-		case cReadSensor:
-			// TODO check if data != '{"error":"....."}'
-			fc.sensorList = $.parseJSON(data);
-			for (i = 0; i < fc.sensorList.length; i++) {
-				fc.sensorList[i].Ts='';
-				fc.sensorList[i].Val='';
-			}
-			if ( fc.refList == null ) {
-				fc.refList = new Object();
-			}
-			fc.refList['SensorList'] = refListFromNames('SensorList', fc.sensorList);
-			gohSensorTr();
-			gohAdminTab();
-			break;
-		case cReadSensorVal:
-		case cGetSensorLastVal:
-			// TODO check if data != '{"error":"....."}'
-			var sensorVal = $.parseJSON(data);
-			var sensor = getObjById(fc.sensorList,cmde.objectid);
-			sensor.Ts = sensorVal.Ts;
-			sensor.Val = sensorVal.Val;
-			gohSensorTd(sensor.Values[0].IdObject, getObjVal(sensor,"ImgFileName"), getObjVal(sensor,"Name"), sensor.Ts, sensor.Val, true);
-			break;
-		case cReadSensorAct:
-			// TODO check if data != '{"error":"....."}'
-			fc.sensorActList = $.parseJSON(data);
-			gohAdminTab();
-			break;
-		case cSaveObject:
-			// TODO check if data != '{"error":"....."}'
-
-			// Reload Objects from server, this will update GUI as well
-			setTimeout(function() { readObjectLst( getReadForItemId(cmde.itemid) ); }, 100);
-			break;
-		case cTriggerActor:
-			// TODO check if data != '{"error":"....."}'
-			gohMessage(cmde.command + '(' + data + ')' ,'success',1500);
-			break;
-		default:
-			gohMessage('callServer : action inconnue (' + action + ')', 'danger',3000);
-			break;
 		}
 	});
 }
@@ -353,7 +351,7 @@ function gohMessage(message,msgtype,delay){
 		setTimeout(function() { $('#goh-message').attr("class", "hide" ); }, delay);
 	}
 	$('#goh-message').attr("class", curClass ) ;
-	$('#goh-message').html('<div class="panel-heading">' + message + '</div>');
+	$('#goh-message').html('<div class="panel-heading" style="text-align:center;" >' + message + '</div>');
 }
 
 // ---------------------------
@@ -371,7 +369,7 @@ function gohActors() {
 	var i = 0;
 	for (i = 0; i < fc.actorList.length; i++) {
 		if ( getObjVal(fc.actorList[i],"IsVisible") == '1' ) {
-			html = html + '<button type="button" class="btn btn-link" style="background:none; width:100px; color:black;" data-toggle="modal" data-target="#actormodal_' + i + '">';
+			html = html + '<button type="button" class="btn btn-link" style="background:none; width:130px; color:black;" data-toggle="modal" data-target="#actormodal_' + i + '">';
 			html = html + getObjVal(fc.actorList[i],"Name") + '<br><img class="icone" src="';
 			html = html + getObjVal(fc.actorList[i],"ImgFileName") + '"></img></button>';
 
@@ -382,9 +380,9 @@ function gohActors() {
 			if ( getObjVal(fc.actorList[i],"DynParamType") != '0' ) {
 				html = html + '<input id="actorparam_' + i + '" type="text" class="form-control"></span>';
 			}
-			html = html + '</div><div class="modal-footer">';
-			html = html + '<button type="button" class="btn btn-default" data-dismiss="modal" onclick="actionner(' + i + ')">OK</button>';
-			html = html + '<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>';
+			html = html + '</div><div class="modal-footer" style="text-align:center;" >';
+			html = html + '<button type="button" class="btn btn-default" style="padding: 20px 30px;" data-dismiss="modal" onclick="actionner(' + i + ')">&nbsp;&nbsp;OK&nbsp;&nbsp;</button>';
+			html = html + '<button type="button" class="btn btn-default" style="padding: 20px 30px;" data-dismiss="modal">Cancel</button>';
 			html = html + '</div>';
 			html = html + '</div></div></div>';
 		}
@@ -410,7 +408,7 @@ function gohImgSensors() {
 	var i = 0;
 	for (i = 0; i < fc.imgSensorList.length; i++) {
 		if ( getObjVal(fc.imgSensorList[i],"IsVisible") == '1' ) {
-			html = html + '<button type="button" class="btn btn-link" style="background:none; width:100px; color:black;" onclick="showImgSensorReading(' + i + ');">';
+			html = html + '<button type="button" class="btn btn-link" style="background:none; width:130px; color:black;" onclick="showImgSensorReading(' + i + ');">';
 			html = html + getObjVal(fc.imgSensorList[i],"Name") + '<br><img class="icone" src="';
 			html = html + getObjVal(fc.imgSensorList[i],"ImgFileName") + '"></img></button>';
 		}
