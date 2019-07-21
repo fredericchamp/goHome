@@ -63,16 +63,15 @@ sudo apt-get install sshfs
 #
 # Go lang
 #
-# sudo apt-get install golang : currently install go1.3 on raspberry pi, we need at least go1.6
-# Download from https://storage.googleapis.com/golang and install to default dir (/usr/local/go)
+sudo apt-get install golang
 #
-cd /usr/local
-sudo wget https://storage.googleapis.com/golang/go1.7.linux-armv6l.tar.gz
-sudo tar xzf go1.7.linux-armv6l.tar.gz
-sudo rm -f go1.7.linux-armv6l.tar.gz
-
-# Add /usr/local/go/bin to default PATH, or create links :
-sudo ln -s /usr/local/go/bin/* /usr/local/bin
+# For other version
+# Download from https://storage.googleapis.com/golang and install to default dir (/usr/local/go)
+#cd /usr/local
+#sudo wget https://storage.googleapis.com/go1.7.linux-armv6l.tar.gz
+#sudo tar xzf $GOLANG_PKG
+#sudo rm -f $GOLANG_PKG
+#sudo ln -s /usr/local/go/bin/* /usr/local/bin
 
 ########################################################
 # Retreive goHome

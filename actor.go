@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/url"
+	"net/http"
 	"strings"
 	"time"
 
@@ -114,23 +117,47 @@ func GoHomeExit(param1 string, param2 string) (result string, err error) {
 // -----------------------------------------------
 // -----------------------------------------------
 
-// SendSMS : send a SMS using param1 device
-// param1 : serial port (i.e. /dev/ttyAMA0 on rpi). Other device type may be added in the futur
-// param2 : "<phoneNum>|<message>" with phoneNum := "[0-9]+"
+// SendSMS : send a SMS using a Android device with SMS Gateway Ultimate (https://play.google.com/store/apps/details?id=com.icecoldapps.smsgatewayultimate)
+// param1 : SMS Gateway <serveur[:port]> i.e. 192.168.43.1:1116
+// param2 : "<phoneNum> <message>" with phoneNum := "[0-9]+"
 func SendSMS(param1 string, param2 string) (result string, err error) {
-	serialPort := param1
-	pTab := strings.Split(param2, "|")
-	if len(pTab) <= 1 {
-		err = errors.New("SendSMS bad parameter '" + param2 + "', expecting '<phoneNum>|<message>'")
+	var Url *url.URL
+	Url, err = url.Parse("http://" + param1 + "/send.html")
+	if err != nil {
+		err = errors.New("SendSMS bad url '" + param1 + "', " + err.Error())
 		glog.Errorf(err.Error())
 		result = "bad parameter"
 		return
 	}
-	phoneNum := pTab[0]
-	message := strings.Join(pTab[1:], "|")
+	pTab := strings.Split(param2, " ")
+	if len(pTab) <= 1 {
+		err = errors.New("SendSMS bad parameter '" + param2 + "', expecting '<phoneNum> <message>'")
+		glog.Errorf(err.Error())
+		result = "bad parameter"
+		return
+	}
+	parameters := url.Values{}
+    parameters.Add("smstype", "sms")
+    parameters.Add("smsto", pTab[0])
+	parameters.Add("smsbody", strings.Join(pTab[1:], " "))
+    Url.RawQuery = parameters.Encode()
 
-	result, err = SerialATSMS(serialPort, phoneNum, message)
+	resp, err := http.Get(Url.String())
+	if err != nil {
+		err = errors.New("SendSMS gateway err '" + Url.String() + "', " + err.Error())
+		glog.Errorf(err.Error())
+		result = "SendSMS gateway err"
+		return
+	}
 
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if ! strings.Contains(fmt.Sprintf("%s",body),"The SMS has been sent") {
+		result = "Missing Gateway confirmation"
+		return
+	}
+
+	result = "Done"
 	return
 }
 
