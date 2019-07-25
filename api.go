@@ -39,6 +39,7 @@ type apiCommandSruct struct {
 	Startts   int64
 	Endts     int64
 	Jsonparam string
+	UserCode  string
 }
 
 // -----------------------------------------------
@@ -232,7 +233,7 @@ func fctApiSaveObject(profil TUserProfil, jsonCmde apiCommandSruct) (apiResp []b
 		// if objectid > 0 it's an UPDATE => fetch existing object
 		objs, err := getHomeObjects(nil, jsonCmde.Itemid, objectid)
 		if err != nil {
-			apiResp = apiError(fmt.Sprintf("%s fail to load matching object (%s) : %s", jsonCmde.Command, objectid, err))
+			apiResp = apiError(fmt.Sprintf("%s fail to load matching object (%d) : %s", jsonCmde.Command, objectid, err))
 			return
 		}
 		if len(objs) != 1 {

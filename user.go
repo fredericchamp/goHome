@@ -84,6 +84,51 @@ func getUserFromCert(peerCrt []*x509.Certificate) (userObj HomeObject, err error
 	if glog.V(2) {
 		glog.Infof("Client email from cert = '%s'", email)
 	}
+	userObj, err = getUserFromEmail(email)
+	return 
+}
+
+// getUserFromCode : return user HomeObject or error if not found
+func getUserFromCode(db *sql.DB, userCode string) (userObj HomeObject, err error) {
+	if db == nil {
+		if db, err = openDB(); err != nil {
+			return
+		}
+		defer db.Close()
+	}
+
+	query, err := getGlobalParam(db, "Global", "userOTP")
+	if err != nil {
+		glog.Errorf("getUserFromCode fail to get userOTP : %s", err)
+		return
+	}
+
+	rows, err := db.Query(query, userCode)
+	if err != nil {
+		glog.Errorf("getUserFromCode query fail (query=%s,userCode=%s) : %s ", query, userCode, err)
+		return
+	}
+	defer rows.Close()
+
+	var email string
+	rows.Next()
+	err = rows.Scan(&email)
+	if err != nil {
+		glog.Errorf("getUserFromCode scan fail (query=%s,userCode=%s) : %s ", query, userCode, err)
+		return
+	}
+
+	if err = rows.Err(); err != nil {
+		glog.Errorf("getUserFromCode rows.Err (query=%s,userCode=%s) : %s ", query, userCode, err)
+		return
+	}
+
+	userObj, err = getUserFromEmail(email)
+	return 
+}
+
+// getUserFromEmail : return user HomeObject or error if not found
+func getUserFromEmail(email string) (userObj HomeObject, err error) {
 
 	_, err = loadUsers(nil, false)
 	if err != nil {

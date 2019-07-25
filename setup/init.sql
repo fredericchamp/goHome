@@ -12,7 +12,7 @@ create unique index goHome_Uniq on goHome (Perimeter, Name);
 
 create table Item (idItem integer not null primary key, Name text, idProfil integer not null, idMasterItem integer not null, iconeFileName text);
 
-create table ItemField (idField integer not null primary key, idItem integer not null, nOrder integer not null, Name text, idDataType not null, Label text, Helper text, UniqKey integer, Required integer, RefList text, Regexp text );
+create table ItemField (idField integer not null primary key, idItem integer not null, nOrder integer not null, Name text, idDataType text not null, Label text, Helper text, UniqKey integer, Required integer, RefList text, Regexp text );
 create unique index ItemField_Uniq on ItemField (idItem, nOrder);
 insert into ItemField values ( 0, 0, 0, 'fieldNone', 0, '', '', 0, 0, '', '' );
 
@@ -52,12 +52,13 @@ insert into goHome values    ( 'Backup', 'cleanup',         '/bin/rm -f @archive
 -- UPnP parameters to allow access to the server if behind a router with NAT (UPnP must be enable on the router) -- update with desire port number
 insert into goHome select 'UPnP', '8080', '@localhost@:' || gp.val from goHome gp where gp.perimeter = 'Http' and gp.name = 'https_port';
 -- Proxy for IP webcam
---insert into goHome values ( 'Proxy', '/nexus/', 'http://10.0.0.5:8080' );
 insert into goHome values ( 'Proxy', '/mini/', 'http://10.0.0.53:8080' );
 insert into goHome values ( 'Proxy', '/spica/', 'http://10.0.0.54:8080' );
 insert into goHome values ( 'Proxy', '/oneplus3/', 'http://10.0.0.55:8080' );
---TODO--insert into goHome values ( 'Proxy', '/stairway/', 'http://10.0.0.56:8080' );
+insert into goHome values ( 'Proxy', '/stairway/', 'http://10.0.0.56:8080' );
 insert into goHome values ( 'Proxy', '/oneplus1/', 'http://10.0.0.57:8080' );
+
+
 
 -- Proxy for USB local webcam (working with motion running)
 insert into goHome values ( 'Proxy', '/sous-sol/', 'http://127.0.0.1:8081' ); -- 8081=mjpeg ; 8080=controls

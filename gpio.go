@@ -38,7 +38,7 @@ func CallGPIO(param1 string, param2 string) (result string, err error) {
 	}
 	err = json.Unmarshal([]byte(param1), &gpioParam)
 	if err != nil {
-		result = fmt.Sprintf("Fail to unmarshal gpioParam '%s' : %s", gpioParam, err)
+		result = fmt.Sprintf("Fail to unmarshal gpioParam '%+v' : %s", gpioParam, err)
 		glog.Errorf(result)
 		return
 	}

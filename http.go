@@ -64,28 +64,14 @@ func writeApiError(w http.ResponseWriter, errMsg string) {
 
 // apiHandler : handle API requests
 func apiHandler(w http.ResponseWriter, r *http.Request) {
+	var userObj HomeObject
 	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 
-	userObj, err := getUserFromCert(r.TLS.PeerCertificates)
-	if err != nil {
-		writeApiError(w, err.Error())
-		return
-	}
-
-	profil, err := checkApiUser(userObj)
-	if err != nil {
-		writeApiError(w, err.Error())
-		return
-	}
-
-	if err = r.ParseForm(); err != nil {
+	// Parse received request
+	if err := r.ParseForm(); err != nil {
 		writeApiError(w, fmt.Sprintf("Form parse error '%s' for (%s)", err, r.Form))
 		return
 	}
-	if glog.V(2) {
-		glog.Infof("User profil %d, Form=", profil, r.Form)
-	}
-
 	command, err := getFormStrVal(r.Form, "command", 0)
 	if err != nil {
 		writeApiError(w, err.Error())
@@ -103,6 +89,33 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		glog.Info(jsonCmde)
 	}
 
+	// Handle user info
+	if glog.V(1) {
+		glog.Infof("User code = %s", jsonCmde.UserCode)
+	}
+
+	userCert := r.TLS.PeerCertificates
+	if ( len(userCert) > 0 ) {
+		userObj, err = getUserFromCert(r.TLS.PeerCertificates)
+	} else { // if no user cetificat provided, fall back to user code
+		userObj, err = getUserFromCode(nil, jsonCmde.UserCode)
+	}
+	if err != nil {
+		writeApiError(w, err.Error())
+		return
+	}
+
+	profil, err := checkApiUser(userObj)
+	if err != nil {
+		writeApiError(w, err.Error())
+		return
+	}
+
+	if glog.V(2) {
+		glog.Infof("User profil %d, Form=", profil, r.Form)
+	}
+
+	// Handle received command
 	switch jsonCmde.Command {
 
 	case apiReadRefList:
@@ -205,7 +218,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	return
+//	return
 
 }
 
@@ -319,7 +332,8 @@ func startHTTPS(chanExit chan bool) {
 		// RequireAnyClientCert
 		// VerifyClientCertIfGiven
 		// RequireAndVerifyClientCert
-		ClientAuth: tls.RequireAndVerifyClientCert,
+//		ClientAuth: tls.RequireAndVerifyClientCert,
+		ClientAuth: tls.VerifyClientCertIfGiven,
 	}
 	tlsConfig.BuildNameToCertificate()
 

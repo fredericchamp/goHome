@@ -245,6 +245,8 @@ function readObjectLst( action ) {
 // ---------------------------
 
 function callServer(action,cmde){
+	cmde["userCode"]=$('#userCode').val();
+	jsontmp=$.toJSON(cmde);
 	$.post("/api", { command:$.toJSON(cmde) }, function(data, status){
 		var retour = $.parseJSON(data);
 		if ( retour.error === undefined ) { // did not get data = '{"error":"....."}'
@@ -355,9 +357,10 @@ function gohMessage(message,msgtype,delay){
 }
 
 // ---------------------------
-
 function gohHeader() {
-	$("#goh-header").html("Welcome " + getObjVal(fc.currentUser,"FirstName") + ' (' + getObjVal(fc.currentUser,"Email") + ')');
+	if ( $("#goh-header-text").html() == "Utilisateur inconnu" ) {
+		$("#goh-header-text").html('Welcome ' + getObjVal(fc.currentUser,"FirstName") + '&nbsp;&nbsp;&nbsp;&nbsp;');
+	}
 }
 
 // ---------------------------
@@ -707,12 +710,8 @@ function adminSaveObj() {
 	$("#goh-admin-edit-object").attr("class", 'hide');
 }
 
-// ---------------------------
 
-$(document).ready(function(){
-
-	$("#goh-header").html("Utilisateur non reconnu");
-
+function initFullIHM() {
 	// Read Reference lists
 	callServer(cReadRefList, { command:'ReadRefList', itemid:0, objectid:0, startts:0, endts:0, jsonparam:'%' });
 	// Read Item definition
@@ -734,7 +733,22 @@ $(document).ready(function(){
 
 	// Read sensorAct i.e. actors trigger by sensor reading
 	readObjectLst(cReadSensorAct);
+}
 
+// ---------------------------
+
+$(document).ready(function(){
+
+	//$("#goh-header").html("Utilisateur non reconnu");
+	$("#goh-header").html(
+		'<span id="goh-header-text" onclick="window.location.reload(true);" >Utilisateur inconnu</span>' +
+		'<span id="goh-user-code"><input id="userCode" type="text" value="">' + 
+			'<button type="button" class="btn btn-default" onclick="initFullIHM()"> GO </button>' +
+		'</span>'
+//															text => password
+	);
+
+	initFullIHM();
 });
 
 // ---------------------------
