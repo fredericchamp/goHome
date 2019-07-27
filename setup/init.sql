@@ -31,7 +31,7 @@ create unique index RefValues_PK1 on RefValues (name, code);
 create unique index RefValues_PK2 on RefValues (name, label);
 
 -- Basic global parameters
-insert into goHome values    ( 'Global', 'Version',         '0.1');
+insert into goHome values    ( 'Global', 'Version',         '0.2');
 insert into goHome values    ( 'Global', 'Email',           'admin@mydomain.net');
 insert into goHome values    ( 'Global', 'ServerName',      '-SrvName-');
 -- Change to the real server IP
@@ -40,6 +40,7 @@ insert into goHome values    ( 'Http',   'server_crt',      '/var/goHome/certifi
 insert into goHome values    ( 'Http',   'server_key',      '/var/goHome/certificats/server.key.pem');
 insert into goHome values    ( 'Http',   'ca_crt',          '/var/goHome/certificats/goHomeCAcert.pem');
 insert into goHome values    ( 'Http',   'fileserver_root', '/var/goHome/www');
+--insert into goHome values    ( 'Http',   'https_port2',     '444');
 -- Backup parameters
 insert into goHome values    ( 'Backup', 'date/time',       '0 2 * *');
 insert into goHome values    ( 'Backup', 'dir',             '/var/goHome/backup');

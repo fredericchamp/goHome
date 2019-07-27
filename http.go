@@ -11,9 +11,67 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"time"
 
 	"github.com/golang/glog"
 )
+
+// -----------------------------------------------
+const header = `
+<!-- HEADER -->
+<html>
+<head>
+	<title>goHome</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+	<meta name="description" content="goHome">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="css/main.css">
+	<script src="js/jquery.min.js"></script>
+%s
+</head>
+<body class="gohome">
+<div id="goh-header" class="mainheader" onclick="window.location.reload(true);" >%s</div>
+`
+
+const script = `
+<script>
+function callServer(param){
+	jsonparam='{\"command\":\"TriggerActor\",\"itemid\":0,\"objectid\":'+param+',\"startts\":0,\"endts\":0,\"jsonparam\":\"\",\"usercode\":\"'+$('#usercode').val()+'\"}';
+	$.post("/api", { command:jsonparam }, function(data, status){
+		alert(data);
+	});
+}
+</script>
+`
+
+const userCodeForm = `
+<div align="center"><br><form action="%s" method="POST">
+	<input type="password" id="usercode" name="usercode" value="%s">
+	<!--<input type="submit" value="Submit">-->
+</form><br></div>
+`
+
+const actionDiv = `
+<div id="div-actors" align="center">
+	<img src="/images/portail.jpg" class="icone" onclick="callServer(3);" >&nbsp;&nbsp;&nbsp;
+	<img src="/images/garage.jpg" class="icone"  onclick="callServer(4);" >
+</div><br><br>
+`
+
+const imageSensorDiv = `
+<div id="imgsensor" align="center">
+	<img id="imgsensorsrc" src="/alarm/video" onclick="$('#imgsensorsrc').attr('src' , '/alarm/video?cache=' + Math.random() );">
+</div><br><br>
+`
+
+const footer = `
+<!-- FOOTER -->
+<br><br>
+<p align="center">-*-</p>
+<p align="center">%s</p>
+</body>
+</html>
+`
 
 // -----------------------------------------------
 
@@ -59,6 +117,64 @@ func writeApiError(w http.ResponseWriter, errMsg string) {
 //	fmt.Fprintf(w, "<p>Post params : %s</p>\n", r.Form)
 //	fmt.Fprintf(w, footer, time.Now().String())
 //}
+
+// -----------------------------------------------
+
+// sendInitPage : landing page for simpleResponse
+func sendInitPage(w http.ResponseWriter, UrlPath string) {
+	fmt.Fprintf(w, header, "", "Utilisateur inconnu")
+	fmt.Fprintf(w, userCodeForm, UrlPath, "")
+	fmt.Fprintf(w, footer, time.Now().Format("2 Jan 2006 15:04:05") )
+	return
+}
+
+// -----------------------------------------------
+
+// simpleResponse : for simple HTTP client that can't handle modern css
+func simpleResponse(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+
+	// Parse received request
+	if err := r.ParseForm(); err != nil {
+		writeApiError(w, fmt.Sprintf("Form parse error '%s' for (%s)", err, r.Form))
+		return
+	}
+	if glog.V(1) {
+		glog.Infof("Paramaters = %v",r.Form)
+	}
+
+	// Look for a user code
+	userCode, err := getFormStrVal(r.Form, "usercode", 0)
+	if err != nil {
+		// No userCode found => return page with form to input userCode
+		glog.Infof("No userCode found : %v",err)
+		sendInitPage(w,r.URL.Path)
+		return
+	}
+
+	// Check userCode validity
+	userObj, err := getUserFromCode(nil, userCode)
+	if err != nil {
+		// Invalid userCode
+		glog.Infof("Invalid userCode %v",err)
+		sendInitPage(w,r.URL.Path)
+		return
+	}
+
+	userName, err := userObj.getStrVal("FirstName")
+	if err != nil {
+		glog.Infof("Get user FirstName : %v",err)
+		userName = "FirstName"
+	}
+
+	// Got a valid userCode
+	fmt.Fprintf(w, header, script, userName)
+	fmt.Fprintf(w, userCodeForm, r.URL.Path, userCode)
+	fmt.Fprintf(w, actionDiv)
+	fmt.Fprintf(w, imageSensorDiv)
+	fmt.Fprintf(w, footer, time.Now().Format("2 Jan 2006 15:04:05") )
+	return
+}
 
 // -----------------------------------------------
 
@@ -305,6 +421,7 @@ func startHTTPS(chanExit chan bool) {
 
 	// Note : access to "/api", apiHandler required a registered user in DB
 	serverMux.HandleFunc("/api", apiHandler)
+	serverMux.HandleFunc("/simple", simpleResponse)
 	//serverMux.HandleFunc("/tst/", defaultResponse)
 
 	serverMux.Handle("/", http.FileServer(http.Dir(fileServerRoot)))

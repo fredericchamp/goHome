@@ -97,7 +97,7 @@ func getUserFromCode(db *sql.DB, userCode string) (userObj HomeObject, err error
 		defer db.Close()
 	}
 
-	query, err := getGlobalParam(db, "Global", "userOTP")
+	query, err := getGlobalParam(db, "Global", "UserOTP")
 	if err != nil {
 		glog.Errorf("getUserFromCode fail to get userOTP : %s", err)
 		return
