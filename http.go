@@ -11,13 +11,23 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang/glog"
 )
 
+var htmlEscaper = strings.NewReplacer(
+	`&`, "&amp;",
+	`'`, "&#39;",
+	`<`, "&lt;",
+	`>`, "&gt;",
+	`"`, "&#34;",
+)
+ 
 // -----------------------------------------------
-const header = `
+const htmlHeader = `
 <!-- HEADER -->
 <html>
 <head>
@@ -25,50 +35,56 @@ const header = `
 	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
 	<meta name="description" content="goHome">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<link rel="stylesheet" href="css/main.css">
-	<script src="js/jquery.min.js"></script>
-%s
 </head>
-<body class="gohome">
-<div id="goh-header" class="mainheader" onclick="window.location.reload(true);" >%s</div>
+<body 
+	style="background-image: url(/images/PlageMoorea.jpg);background-repeat: no-repeat;background-size: 100%%;"
+	onload="%s"
+>
+	<div align="center" onclick="window.location.reload(true);" >%s</div>
+	<br><br>
+	<div id="maindiv" align="center">
 `
 
-const script = `
-<script>
-function callServer(param){
-	jsonparam='{\"command\":\"TriggerActor\",\"itemid\":0,\"objectid\":'+param+',\"startts\":0,\"endts\":0,\"jsonparam\":\"\",\"usercode\":\"'+$('#usercode').val()+'\"}';
-	$.post("/api", { command:jsonparam }, function(data, status){
-		alert(data);
-	});
-}
-</script>
+const htmlUserCode = `
+		<form action="#" method="POST">
+			<input type="password" id="usercode" name="usercode" value="%s">
+			<input type="submit" value="Submit">
+		</form>
 `
 
-const userCodeForm = `
-<div align="center"><br><form action="%s" method="POST">
-	<input type="password" id="usercode" name="usercode" value="%s">
-	<!--<input type="submit" value="Submit">-->
-</form><br></div>
+const htmlAction = `
+		<table><tr>
+			<td align="center">
+				<form action="#" method="POST">
+					<input type="hidden" id="usercode" name="usercode" value="%s">
+					<input type="hidden" id="objectid" name="objectid" value="3">
+					<input type="image" src="/images/portail.jpg" border="1px" width="120" height="120">
+				</form>
+			</td>
+			<td align="center">
+				<form action="#" method="POST">
+					<input type="hidden" id="usercode" name="usercode" value="%s">
+					<input type="hidden" id="objectid" name="objectid" value="4">
+					<input type="image" src="/images/garage.jpg"  border="1px" width="120" height="120">
+				</form>
+			</td>
+		</tr><tr>
+			<td align="center" colspan="2" >
+				<br><br>
+				<form action="#" method="POST">
+					<input type="hidden" id="usercode" name="usercode" value="%s">
+					<input type="hidden" id="objectid" name="objectid" value="0">
+					<input type="image" src="/capture/simpleAlarm.jpg" border="2px" width="512" height="384">
+				</form>
+			</td>
+		</tr></table>
 `
 
-const actionDiv = `
-<div id="div-actors" align="center">
-	<img src="/images/portail.jpg" class="icone" onclick="callServer(3);" >&nbsp;&nbsp;&nbsp;
-	<img src="/images/garage.jpg" class="icone"  onclick="callServer(4);" >
-</div><br><br>
-`
-
-const imageSensorDiv = `
-<div id="imgsensor" align="center">
-	<img id="imgsensorsrc" src="/alarm/video" onclick="$('#imgsensorsrc').attr('src' , '/alarm/video?cache=' + Math.random() );">
-</div><br><br>
-`
-
-const footer = `
+const htmlFooter = `
+	</div>
 <!-- FOOTER -->
-<br><br>
-<p align="center">-*-</p>
-<p align="center">%s</p>
+	<p align="center">-*-</p>
+	<p align="center">%s</p>
 </body>
 </html>
 `
@@ -86,6 +102,9 @@ func getFormStrVal(form url.Values, key string, idx int) (strVal string, err err
 }
 
 func writeApiError(w http.ResponseWriter, errMsg string) {
+	if glog.V(1) {
+		glog.Infof("writeApiError : '%s'", errMsg)
+	}
 	w.Write(apiError(errMsg))
 	return
 }
@@ -121,13 +140,20 @@ func writeApiError(w http.ResponseWriter, errMsg string) {
 // -----------------------------------------------
 
 // sendInitPage : landing page for simpleResponse
-func sendInitPage(w http.ResponseWriter, UrlPath string) {
-	fmt.Fprintf(w, header, "", "Utilisateur inconnu")
-	fmt.Fprintf(w, userCodeForm, UrlPath, "")
-	fmt.Fprintf(w, footer, time.Now().Format("2 Jan 2006 15:04:05") )
+func sendInitPage(w http.ResponseWriter) {
+	fmt.Fprintf(w, htmlHeader, "", "Utilisateur inconnu")
+	fmt.Fprintf(w, htmlUserCode, "")
+	fmt.Fprintf(w, htmlFooter, time.Now().Format("2 Jan 2006 15:04:05") )
 	return
 }
 
+// sendActionPage : returning defaut action page
+func sendActionPage(w http.ResponseWriter, onload string, userName string, userCode string ) {
+	fmt.Fprintf(w, htmlHeader, onload, userName)
+	fmt.Fprintf(w, htmlAction, userCode, userCode, userCode)
+	fmt.Fprintf(w, htmlFooter, time.Now().Format("2 Jan 2006 15:04:05") )
+	return
+}
 // -----------------------------------------------
 
 // simpleResponse : for simple HTTP client that can't handle modern css
@@ -139,7 +165,7 @@ func simpleResponse(w http.ResponseWriter, r *http.Request) {
 		writeApiError(w, fmt.Sprintf("Form parse error '%s' for (%s)", err, r.Form))
 		return
 	}
-	if glog.V(1) {
+	if glog.V(2) {
 		glog.Infof("Paramaters = %v",r.Form)
 	}
 
@@ -147,8 +173,10 @@ func simpleResponse(w http.ResponseWriter, r *http.Request) {
 	userCode, err := getFormStrVal(r.Form, "usercode", 0)
 	if err != nil {
 		// No userCode found => return page with form to input userCode
-		glog.Infof("No userCode found : %v",err)
-		sendInitPage(w,r.URL.Path)
+		if glog.V(2) {
+			glog.Infof("No userCode found : %v",err)
+		}
+		sendInitPage(w)
 		return
 	}
 
@@ -156,23 +184,77 @@ func simpleResponse(w http.ResponseWriter, r *http.Request) {
 	userObj, err := getUserFromCode(nil, userCode)
 	if err != nil {
 		// Invalid userCode
-		glog.Infof("Invalid userCode %v",err)
-		sendInitPage(w,r.URL.Path)
+		if glog.V(2) {
+			glog.Infof("Invalid userCode %v",err)
+		}
+		sendInitPage(w)
 		return
 	}
 
 	userName, err := userObj.getStrVal("FirstName")
 	if err != nil {
-		glog.Infof("Get user FirstName : %v",err)
+		if glog.V(2) {
+			glog.Infof("Get user FirstName : %v",err)
+		}
 		userName = "FirstName"
 	}
 
-	// Got a valid userCode
-	fmt.Fprintf(w, header, script, userName)
-	fmt.Fprintf(w, userCodeForm, r.URL.Path, userCode)
-	fmt.Fprintf(w, actionDiv)
-	fmt.Fprintf(w, imageSensorDiv)
-	fmt.Fprintf(w, footer, time.Now().Format("2 Jan 2006 15:04:05") )
+	// -------------------------- Action --------------------------
+
+	// Found a user for given userCode, get profil
+	profil, err := checkApiUser(userObj)
+	if err != nil {
+		if glog.V(2) {
+			glog.Infof("Fail to check Api access : %v",err)
+		}
+		sendActionPage(w, "", userName, userCode)
+		return
+	}
+
+	// Check if any action (objectid) received
+	objectidStr, err := getFormStrVal(r.Form, "objectid", 0)
+	if err != nil {
+		// No objectid found => return page with form to input userCode
+		if glog.V(2) {
+			glog.Infof("No valid ObjectId found : %s - %v", objectidStr, err)
+		}
+		sendActionPage(w, "", userName, userCode)
+		return
+	}
+	objectid, err := strconv.Atoi(objectidStr)
+	if err != nil {
+		// Not an int objectidStr
+		if glog.V(2) {
+			glog.Infof("Bad objectid found : %v",err)
+		}
+		sendActionPage(w, "", userName, userCode)
+		return
+	}
+
+	// Check user access to object
+	if err := checkAccessToObjectId(profil, objectid); err != nil {
+		if glog.V(2) {
+			glog.Infof("Acces api check fail : %v",err)
+		}
+		sendActionPage(w, "", userName, userCode)
+		return
+	}
+
+	// Trigger asked action
+	result, err := triggerActorById(objectid, userObj.getId(), "")
+	if err != nil {
+		if glog.V(2) {
+			glog.Infof("Trigger actionfail : %v",err)
+		}
+		sendActionPage(w, "", userName, userCode)
+		return
+	}
+
+	if glog.V(2) {
+		glog.Infof("Actor result : %s",result)
+	}
+
+	sendActionPage(w, fmt.Sprintf("alert('Action %d : %s')",objectid,htmlEscaper.Replace(result)), userName, userCode)
 	return
 }
 
@@ -206,7 +288,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Handle user info
-	if glog.V(1) {
+	if glog.V(2) {
 		glog.Infof("User code = %s", jsonCmde.UserCode)
 	}
 
@@ -228,63 +310,63 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if glog.V(2) {
-		glog.Infof("User profil %d, Form=", profil, r.Form)
+		glog.Infof("User profil %d, Form=%v", profil, r.Form)
 	}
 
 	// Handle received command
 	switch jsonCmde.Command {
 
 	case apiReadRefList:
-		if glog.V(1) {
+		if glog.V(2) {
 			glog.Infof("%s (name=%s)", jsonCmde.Command, jsonCmde.Jsonparam)
 		}
 		w.Write(fctApiRefList(jsonCmde))
 		return
 
 	case apiReadCurrentUser:
-		if glog.V(1) {
+		if glog.V(2) {
 			glog.Infof("%s (user objectid=%d)", jsonCmde.Command, userObj.Values[0].IdObject)
 		}
 		w.Write(apiObjectResponse(profil, userObj))
 		return
 
 	case apiReadItem:
-		if glog.V(1) {
+		if glog.V(2) {
 			glog.Infof("%s (item=%d)", jsonCmde.Command, jsonCmde.Itemid)
 		}
 		w.Write(fctApiReadItem(profil, jsonCmde))
 		return
 
 	case apiReadObject:
-		if glog.V(1) {
+		if glog.V(2) {
 			glog.Infof("%s (item=%d, obj=%d)", jsonCmde.Command, jsonCmde.Itemid, jsonCmde.Objectid)
 		}
 		w.Write(fctApiReadObject(profil, jsonCmde))
 		return
 
 	case apiReadSensor:
-		if glog.V(1) {
+		if glog.V(2) {
 			glog.Infof("%s (objectid=%d)", jsonCmde.Command, jsonCmde.Objectid)
 		}
 		w.Write(fctApiGetSensorVal(profil, jsonCmde, true))
 		return
 
 	case apiGetSensorLastVal:
-		if glog.V(1) {
+		if glog.V(2) {
 			glog.Infof("%s (objectid=%d)", jsonCmde.Command, jsonCmde.Objectid)
 		}
 		w.Write(fctApiGetSensorVal(profil, jsonCmde, false))
 		return
 
 	case apiReadHistoVal:
-		if glog.V(1) {
+		if glog.V(2) {
 			glog.Infof("%s (obj=%d, start=%d, end=%d)", jsonCmde.Command, jsonCmde.Objectid, jsonCmde.Startts, jsonCmde.Endts)
 		}
 		w.Write(fctApiReadHistoVal(profil, jsonCmde))
 		return
 
 	case apiReadActorRes:
-		if glog.V(1) {
+		if glog.V(2) {
 			glog.Infof("%s (objectid=%d, start=%d, end=%d)", jsonCmde.Command, jsonCmde.Objectid, jsonCmde.Startts, jsonCmde.Endts)
 		}
 		w.Write(fctApiReadActorRes(profil, jsonCmde))
@@ -295,7 +377,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		return
 
 	case apiSaveObject:
-		if glog.V(1) {
+		if glog.V(2) {
 			glog.Infof("%s (item=%d, obj=%d)", jsonCmde.Command, jsonCmde.Itemid, jsonCmde.Objectid)
 		}
 		w.Write(fctApiSaveObject(profil, jsonCmde))
@@ -323,7 +405,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		return
 
 	case apiTriggerActor:
-		if glog.V(1) {
+		if glog.V(2) {
 			glog.Infof("%s (item=%d, obj=%d)", jsonCmde.Command, jsonCmde.Itemid, jsonCmde.Objectid)
 		}
 		w.Write(fctApiTriggerActor(profil, userObj.getId(), jsonCmde))
@@ -376,6 +458,12 @@ func startHTTPS(chanExit chan bool) {
 		return
 	}
 
+	strPortNumSimple, err := getGlobalParam(db, "Http", "simple_port")
+	if err != nil {
+		glog.Infof("Cant get simple_port, not starting simple server : %s", err)
+		strPortNumSimple = ""
+	}
+
 	serverCrtFileName, err := getGlobalParam(db, "Http", "server_crt")
 	if err != nil {
 		glog.Errorf("Error in startHTTPS ... exiting : %s", err)
@@ -421,7 +509,6 @@ func startHTTPS(chanExit chan bool) {
 
 	// Note : access to "/api", apiHandler required a registered user in DB
 	serverMux.HandleFunc("/api", apiHandler)
-	serverMux.HandleFunc("/simple", simpleResponse)
 	//serverMux.HandleFunc("/tst/", defaultResponse)
 
 	serverMux.Handle("/", http.FileServer(http.Dir(fileServerRoot)))
@@ -449,8 +536,7 @@ func startHTTPS(chanExit chan bool) {
 		// RequireAnyClientCert
 		// VerifyClientCertIfGiven
 		// RequireAndVerifyClientCert
-//		ClientAuth: tls.RequireAndVerifyClientCert,
-		ClientAuth: tls.VerifyClientCertIfGiven,
+		ClientAuth: tls.RequireAndVerifyClientCert,
 	}
 	tlsConfig.BuildNameToCertificate()
 
@@ -461,6 +547,40 @@ func startHTTPS(chanExit chan bool) {
 		// TODO : use custom logger => ErrorLog: goHomeHttpLogger,
 	}
 
+
+	if ( strPortNumSimple != "" ) {
+
+		serverMuxSimple := http.NewServeMux() // Create dedicated ServeMux, rather than using http.defaultServeMux
+		serverMuxSimple.HandleFunc("/simple", simpleResponse)
+		serverMuxSimple.HandleFunc("/api", apiHandler)
+		serverMuxSimple.Handle("/", http.FileServer(http.Dir(fileServerRoot)))
+
+		// Setup HTTPS client for "simple Client"
+		tlsConfigSimple := &tls.Config{
+			ClientCAs: caCertPool,
+			// NoClientCert
+			// RequestClientCert
+			// RequireAnyClientCert
+			// VerifyClientCertIfGiven
+			// RequireAndVerifyClientCert
+			ClientAuth: tls.VerifyClientCertIfGiven,
+		}
+		tlsConfigSimple.BuildNameToCertificate()
+
+		serverSimple := &http.Server{
+			Addr:      ":" + strPortNumSimple,
+			Handler:   serverMuxSimple,
+			TLSConfig: tlsConfigSimple,
+			// TODO : use custom logger => ErrorLog: goHomeHttpLogger,
+		}
+
+		if glog.V(1) {
+			glog.Infof("Starting ListenAndServeTLS (https://*:%s)", strPortNumSimple)
+		}
+
+		go serverSimple.ListenAndServeTLS(serverCrtFileName, serverKeyFileName)
+	}
+
 	if glog.V(1) {
 		glog.Infof("Starting ListenAndServeTLS (https://*:%s)", strPortNum)
 	}
@@ -469,4 +589,5 @@ func startHTTPS(chanExit chan bool) {
 		glog.Errorf("Error starting HTTPS ListenAndServeTLS : %s ... exiting", err)
 		chanExit <- true
 	}
+
 }

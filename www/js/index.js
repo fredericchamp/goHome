@@ -741,11 +741,10 @@ $(document).ready(function(){
 
 	//$("#goh-header").html("Utilisateur non reconnu");
 	$("#goh-header").html(
-		'<span id="goh-header-text" onclick="window.location.reload(true);" >Utilisateur inconnu</span>' +
-		'<span id="goh-user-code"><input id="userCode" type="text" value="">' + 
+		'<span id="goh-header-text" onclick="window.location.reload(true);" >Utilisateur inconnu</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' +
+		'<span id="goh-user-code"><input id="userCode" name="userCode" type="password" value="">' + 
 			'<button type="button" class="btn btn-default" onclick="initFullIHM()"> GO </button>' +
 		'</span>'
-//															text => password
 	);
 
 	initFullIHM();

@@ -88,7 +88,7 @@ func recordActorResult(actor HomeObject, userId int, param string, result string
 		glog.Errorf("Fail to store result (%s) for actor %d : %s ", result, actorId, err)
 	}
 
-	if glog.V(1) {
+	if glog.V(2) {
 		glog.Infof("recordActorResult : %d - %s - %s", time.Now().Unix(), param, result)
 	}
 }

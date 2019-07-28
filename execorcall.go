@@ -78,7 +78,7 @@ func ExecExternalCmd(cmd string, param1 string, param2 string) (result string, e
 		return
 	}
 
-	if glog.V(1) {
+	if glog.V(2) {
 		glog.Infof("ExecExternalCmd : %s => %s", cmd, result)
 	}
 

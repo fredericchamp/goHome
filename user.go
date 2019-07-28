@@ -82,7 +82,7 @@ func getUserFromCert(peerCrt []*x509.Certificate) (userObj HomeObject, err error
 		return
 	}
 	if glog.V(2) {
-		glog.Infof("Client email from cert = '%s'", email)
+		glog.Infof("User email from cert = '%s'", email)
 	}
 	userObj, err = getUserFromEmail(email)
 	return 
@@ -95,6 +95,15 @@ func getUserFromCode(db *sql.DB, userCode string) (userObj HomeObject, err error
 			return
 		}
 		defer db.Close()
+	}
+
+	if userCode == "" {
+		err = errors.New(fmt.Sprintf("getUserFromCode returning (empty user code) : '%s'", userCode))
+		return
+	}
+
+	if glog.V(2) {
+		glog.Infof("User code = '%s'", userCode)
 	}
 
 	query, err := getGlobalParam(db, "Global", "UserOTP")
@@ -111,16 +120,21 @@ func getUserFromCode(db *sql.DB, userCode string) (userObj HomeObject, err error
 	defer rows.Close()
 
 	var email string
-	rows.Next()
-	err = rows.Scan(&email)
-	if err != nil {
-		glog.Errorf("getUserFromCode scan fail (query=%s,userCode=%s) : %s ", query, userCode, err)
-		return
-	}
+	if rows.Next() {
+		err = rows.Scan(&email)
+		if err != nil {
+			glog.Errorf("getUserFromCode scan fail (query=%s,userCode=%s) : %s ", query, userCode, err)
+			return
+		}
 
-	if err = rows.Err(); err != nil {
-		glog.Errorf("getUserFromCode rows.Err (query=%s,userCode=%s) : %s ", query, userCode, err)
-		return
+		if err = rows.Err(); err != nil {
+			glog.Errorf("getUserFromCode rows.Err (query=%s,userCode=%s) : %s ", query, userCode, err)
+			return
+		}
+	} else {
+		if glog.V(2) {
+			glog.Infof("getUserFromCode cant validate user code : '%s'", userCode)
+		}
 	}
 
 	userObj, err = getUserFromEmail(email)
@@ -132,6 +146,11 @@ func getUserFromEmail(email string) (userObj HomeObject, err error) {
 
 	_, err = loadUsers(nil, false)
 	if err != nil {
+		return
+	}
+
+	if email == "" {
+		err = errors.New(fmt.Sprintf("No user found (empty email) '%s'", email))
 		return
 	}
 
@@ -156,15 +175,15 @@ func getUserFromEmail(email string) (userObj HomeObject, err error) {
 			continue // ignore if no IsActive field
 		}
 		if glog.V(2) {
-			glog.Infof("Found active(%d) user for '%s' : id=%d profil=%d)", iActive, email, userObj.getId(), iProfil)
+			glog.Infof("Found active(%d) user for '%s' : id=%d profil=%d)", iActive, email, obj.getId(), iProfil)
 		}
 		userObj = obj
 		return
 	}
 
 	err = errors.New(fmt.Sprintf("No user found for '%s'", email))
-	if glog.V(1) {
-		glog.Error("Error getUserFromCert : ", err)
+	if glog.V(2) {
+		glog.Error("getUserFromEmail Error : ", err)
 	}
 
 	return
