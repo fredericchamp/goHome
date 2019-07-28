@@ -207,7 +207,7 @@ func simpleResponse(w http.ResponseWriter, r *http.Request) {
 		if glog.V(2) {
 			glog.Infof("Fail to check Api access : %v",err)
 		}
-		sendActionPage(w, "", userName, userCode)
+		sendActionPage(w, "alert('Ready')", userName, userCode)
 		return
 	}
 
@@ -218,7 +218,7 @@ func simpleResponse(w http.ResponseWriter, r *http.Request) {
 		if glog.V(2) {
 			glog.Infof("No valid ObjectId found : %s - %v", objectidStr, err)
 		}
-		sendActionPage(w, "", userName, userCode)
+		sendActionPage(w, "alert('Ready')", userName, userCode)
 		return
 	}
 	objectid, err := strconv.Atoi(objectidStr)
@@ -227,7 +227,7 @@ func simpleResponse(w http.ResponseWriter, r *http.Request) {
 		if glog.V(2) {
 			glog.Infof("Bad objectid found : %v",err)
 		}
-		sendActionPage(w, "", userName, userCode)
+		sendActionPage(w, "alert('Ready')", userName, userCode)
 		return
 	}
 
@@ -246,7 +246,7 @@ func simpleResponse(w http.ResponseWriter, r *http.Request) {
 		if glog.V(2) {
 			glog.Infof("Trigger actionfail : %v",err)
 		}
-		sendActionPage(w, "", userName, userCode)
+		sendActionPage(w, fmt.Sprintf("alert('Action %d : failed')",objectid), userName, userCode)
 		return
 	}
 
